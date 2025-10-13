@@ -1,0 +1,25 @@
+{
+  "name": "cinema-compass",
+  "version": "0.1.0",
+  "description": "",
+  "author": "",
+  "scripts": {
+    "server": "nodemon server/index.js",
+    "client": "live-server client --port=3000 --no-css-inject",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "concurrently": "^9.2.1",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.37.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "live-server": "^1.2.2",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.6.2"
+  }
+}
