@@ -6,8 +6,11 @@
       "use": "@vercel/node"
     },
     {
-      "src": "client/**",
-      "use": "@vercel/static"
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
   "routes": [
@@ -16,8 +19,8 @@
       "dest": "server/index.js"
     },
     {
-      "src": "/(.*)$",
-      "dest": "client/$1"
+      "src": "/(.*)",
+      "dest": "dist/index.html"
     }
   ]
 }
