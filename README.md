@@ -54,8 +54,10 @@ git checkout -b feature/<название-фичи> client
 ```json
 "scripts": {
   "server": "nodemon server/index.js",
-  "client": "live-server client --port=3000 --no-css-inject",
+  "client": "vite",
   "dev": "concurrently \"npm run server\" \"npm run client\"",
+  "build": "vite build",
+  "preview": "vite preview",
   "lint": "eslint .",
   "format": "prettier --write ."
 }
@@ -64,8 +66,10 @@ git checkout -b feature/<название-фичи> client
 Описание:
 
 - npm run server — запускает серверную часть (nodemon).
-- npm run client — запускает фронтенд через live-server на порту 3000.
+- npm run client — запускает фронтенд через сборщик Vite.
 - npm run dev — запускает одновременно сервер и клиент (concurrently).
+- npm run build — сборка фронтенда для продакшена.
+- npm run preview — предпросмотр собранного фронтенда.
 - npm run lint — проверка кода через ESLint.
 - npm run format — форматирование кода через Prettier.
 
