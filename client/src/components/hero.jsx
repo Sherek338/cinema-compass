@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Heart } from "lucide-react";
 
 const featuredShows = [
@@ -7,7 +7,7 @@ const featuredShows = [
     image: "https://i.pinimg.com/originals/6c/c7/7d/6cc77d46badffd1480a67a87fc568f12.jpg",
     genres: ["Horror", "Fantasy", "Retro"],
     rating: "18+",
-    info: "4 seasons",
+    info: "5 seasons",
     score: "8.4",
   },
   {
@@ -54,6 +54,9 @@ const featuredShows = [
 
 export function Hero() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const intervalRef = useRef(null);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
   const goToPrevious = () => {
     setCurrentIndex((prev) => (prev === 0 ? featuredShows.length - 1 : prev - 1));
@@ -67,17 +70,33 @@ export function Hero() {
     setCurrentIndex(index);
   };
 
+  useEffect(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      setCurrentIndex((prev) => (prev === featuredShows.length - 1 ? 0 : prev + 1));
+    }, 5000);
+    return () => clearInterval(intervalRef.current);
+  }, [currentIndex]);
+
+  const handleTouchStart = (e) => (touchStartX.current = e.touches[0].clientX);
+  const handleTouchMove = (e) => (touchEndX.current = e.touches[0].clientX);
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    if (diff > 50) goToNext();
+    else if (diff < -50) goToPrevious();
+  };
+
   const current = featuredShows[currentIndex];
 
   return (
-    <div className="relative w-full h-[500px] md:h-[700px] lg:h-[824px] overflow-hidden">
+    <div className="relative w-full h-[500px] md:h-[700px] lg:h-[824px] overflow-hidden" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       <img
         src={current.image}
         alt={current.title}
         className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
       />
       
-      <div className="absolute inset-0 bg-linear-to-t from-raisin-black via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-raisin-black via-transparent to-transparent" />
       
       <div className="relative h-full max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[70px] flex flex-col justify-end pb-12 md:pb-20">
         <div className="flex items-start gap-2 mb-3 md:mb-4">

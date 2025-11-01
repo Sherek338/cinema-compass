@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Hero } from "@/components/hero";
@@ -158,7 +159,160 @@ const watchlist = [
     },
 ];
 
+const trendingSeries = [
+  {
+    title: "Stranger Things",
+    year: "2016-2025",
+    duration: "5 seasons",
+    rating: "8.4",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/uOOtwVbSr4QDjAGIifLDwpb2Pdl.jpg",
+  },
+  {
+    title: "The Last of Us",
+    year: "2023-2025",
+    duration: "2 seasons",
+    rating: "8.7",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/dmo6TYuuJgaYinXBPjrgG9mB5od.jpg",
+  },
+  {
+    title: "Wednesday",
+    year: "2022-2025",
+    duration: "2 seasons",
+    rating: "8.1",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/36xXlhEpQqVVPuiZhfoQuaY4OlA.jpg",
+  },
+  {
+    title: "The Mandalorian",
+    year: "2019-2023",
+    duration: "3 seasons",
+    rating: "8.6",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/sWgBv7LV2PRoQgkxwlibdGXKz1S.jpg",
+  },
+  {
+    title: "Breaking Bad",
+    year: "2008-2013",
+    duration: "5 seasons",
+    rating: "9.5",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg",
+  },
+  {
+    title: "The Crown",
+    year: "2016-2023",
+    duration: "6 seasons",
+    rating: "8.6",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/1DDE0Z2Y805rqfkEjPbZsMLyPwa.jpg",
+  },
+];
+
+const newReleaseSeries = [
+  {
+    title: "Andor",
+    year: "2022-2025",
+    duration: "2 seasons",
+    rating: "8.4",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/khZqmwHQicTYoS7Flreb9EddFZC.jpg",
+  },
+  {
+    title: "House of the Dragon",
+    year: "2022-2024",
+    duration: "2 seasons",
+    rating: "8.5",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/t9XkeE7HzOsdQcDDDapDYh8Rrmt.jpg",
+  },
+  {
+    title: "The Bear",
+    year: "2022-2025",
+    duration: "4 seasons",
+    rating: "8.6",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/eKfVzzEazSIjJMrw9ADa2x8ksLz.jpg",
+  },
+  {
+    title: "The Night Agent",
+    year: "2023-2025",
+    duration: "2 seasons",
+    rating: "7.5",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/4c5yUNcaff4W4aPrkXE6zr7papX.jpg",
+  },
+  {
+    title: "Succession",
+    year: "2018-2023",
+    duration: "4 seasons",
+    rating: "8.9",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/7HW47XbkNQ5fiwQFYGWdw9gs144.jpg",
+  },
+  {
+    title: "The Boys",
+    year: "2019-2024",
+    duration: "4 seasons",
+    rating: "8.7",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/2zmTngn1tYC1AvfnrFLhxeD82hz.jpg",
+  },
+];
+
+const topRatedSeries = [
+  {
+    title: "Breaking Bad",
+    year: "2008-2013",
+    duration: "5 seasons",
+    rating: "9.5",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg",
+  },
+  {
+    title: "Game of Thrones",
+    year: "2011-2019",
+    duration: "8 seasons",
+    rating: "9.2",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
+  },
+  {
+    title: "The Sopranos",
+    year: "1999-2007",
+    duration: "6 seasons",
+    rating: "9.2",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/rTc7ZXdroqjkKivFPvCPX0Ru7uw.jpg",
+  },
+  {
+    title: "The Wire",
+    year: "2002-2008",
+    duration: "5 seasons",
+    rating: "9.3",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/4lbclFySvugI51fwsyxBTOm4DqK.jpg",
+  },
+  {
+    title: "Succession",
+    year: "2018-2023",
+    duration: "4 seasons",
+    rating: "8.9",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/7HW47XbkNQ5fiwQFYGWdw9gs144.jpg",
+  },
+  {
+    title: "Better Call Saul",
+    year: "2015-2022",
+    duration: "6 seasons",
+    rating: "9.0",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/zjg4jpK1Wp2kiRvtt5ND0kznako.jpg",
+  },
+];
+
+const seriesWatchlist = [
+  {
+    title: "Stranger Things",
+    year: "2016-2025",
+    duration: "5 seasons",
+    rating: "8.4",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/uOOtwVbSr4QDjAGIifLDwpb2Pdl.jpg",
+  },
+  {
+    title: "The Last of Us",
+    year: "2023-2025",
+    duration: "2 season",
+    rating: "8.7",
+    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/dmo6TYuuJgaYinXBPjrgG9mB5od.jpg",
+  },
+];
+
 export default function Index() {
+    const [activeTab, setActiveTab] = useState("movies");
     return (
         <div className="min-h-screen bg-raisin-black">
             <Header />
@@ -168,12 +322,18 @@ export default function Index() {
 
                 <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[70px] py-8 md:py-12 lg-py-16">
                     <div className="flex items-center justify-center gap-6 md:gap-10 mb-12 md:mb-16">
-                        <a href="/movies" className="flex flex-col items-start gap-[5px] hover:opacity-80 transition-opacity cursor-pointer">
-                            <h2 className="text-white text-xl md:text-[25px] font-bold">Movies</h2>
-                            <div className="w-full h-0.5 bg-coquelicot" />
-                        </a>
-                        <a href="/series" className="text-white text-xl md:text-[25px] font-normal hover:text-coquelicot transition-colors">Series</a>
+                        <button onClick={() => setActiveTab("movies")} className={`flex flex-col items-start gap-[5px] hover:opacity-80 transition-opacity cursor-pointer ${ activeTab === "movies" ? "" : ""}`}>
+                            <h2 className={`text-xl md:text-[25px] ${activeTab === "movies" ? "font-bold text-white" : "font-normal text-white"}`}>Movies</h2>
+                            {activeTab === "movies" && <div className="w-full h-0.5 bg-coquelicot" />}
+                        </button>
+                        <button onClick={() => setActiveTab("series")} className={`flex flex-col items-start gap-[5px] hover:opacity-80 transition-opacity cursor-pointer ${ activeTab === "series" ? "" : ""}`}>
+                            <h2 className={`text-xl md:text-[25px] ${activeTab === "series" ? "font-bold text-white" : "font-normal text-white"}`}>Series</h2>
+                            {activeTab === "series" && <div className="w-full h-0.5 bg-coquelicot" />}
+                        </button>
                     </div>
+
+            {activeTab === "movies" ? (
+                <>  
 
                     <section className="mb-12 md:mb-16">
                         <div className="flex items-end justify-between mb-4 md:mb-6">
@@ -232,11 +392,69 @@ export default function Index() {
                             </div>
                         </div>
                     </section>
+                </>
+            ) : (
+                <>
+                    <section className="mb-12 md:mb-16">
+                        <div className="flex items-end justify-between mb-4 md:mb-6">
+                            <h2 className="text-white text-2xl md:text-[30px] font-bold capitalize">Trending Now</h2>
+                            <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">View all</a>
+                        </div>
+                        <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
+                            {trendingSeries.map((series, index) => (
+                                <MovieCard key={index} {...series} />
+                            ))}
+                        </div>
+                    </section>
 
+                    <section className="mb-12 md:mb-16">
+                        <div className="flex items-end justify-between mb-4 md:mb-6">
+                            <h2 className="text-white text-2xl md:text-[30px] font-bold capitalize">New Release</h2>
+                            <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">View all</a>
+                        </div>
+                        <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
+                            {newReleaseSeries.map((series, index) => (
+                                <MovieCard key={index} {...series} />
+                            ))}
+                        </div>
+                    </section>
+
+                    <section className="mb-12 md:mb-16">
+                        <div className="flex items-end justify-between mb-4 md:mb-6">
+                            <h2 className="text-white text-2xl md:text-[30px] font-bold capitalize">Top Rated</h2>
+                            <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">View all</a>
+                        </div>
+                        <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
+                            {topRatedSeries.map((series, index) => (
+                                <MovieCard key={index} {...series} />
+                            ))}
+                        </div>
+                    </section>
+
+                    <section>
+                        <div className="flex items-end justify-between mb-4 md:mb-6">
+                            <h2 className="text-white text-2xl md:text-[30px] font-bold capitalize">My Watchlist</h2>
+                            <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">View all</a>
+                        </div>
+                        <div className="flex gap-4 md:gap-5 overflow-x-auto scrollbar-hide">
+                            {seriesWatchlist.map((series, index) => (
+                                <MovieCard key={index} {...series} />
+                            ))}
+                        <div className="shrink-0 flex items-center justify-center w-[200px] h-[273px] border border-[#3F3F3F] bg-[#343434] rounded-sm cursor-pointer hover:border-coquelicot transition-colors group">
+                            <div className="relative w-9 h-9">
+                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-9 h-0.5 bg-white group-hover:bg-coquelicot transition-colors" />
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 h-9 bg-white group-hover:bg-coquelicot transition-colors" />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                </>
+            )}
+            
                 </div>
             </main>
 
             <Footer />
         </div>
-    )
+    );
 }
