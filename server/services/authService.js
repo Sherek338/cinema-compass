@@ -47,7 +47,16 @@ const logout = async (refreshToken) => {
   // Logic for user logout
 };
 const activate = async (activationLink) => {
-  // Logic for account activation
+  const user = await UserModel.findOne({ activationLink });
+  if (!user) {
+    throw new Error('Invalid activation link');
+  }
+  if (user.isActivated) {
+    throw new Error('Account is already activated');
+  }
+
+  user.isActivated = true;
+  await user.save();
 };
 const refresh = async (refreshToken) => {
   // Logic for token refresh

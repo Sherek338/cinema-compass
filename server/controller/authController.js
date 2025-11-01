@@ -29,8 +29,13 @@ const logout = async (req, res, next) => {
 
 const activate = async (req, res, next) => {
   try {
-    console.log('Activation link:', req.params.link);
-    res.send('Account activated');
+    const { link } = req.params;
+    await authService.activate(link);
+
+    res.status(200);
+    res.json({
+      message: 'Account activated successfully',
+    });
   } catch (e) {}
 };
 
