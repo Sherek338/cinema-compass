@@ -30,11 +30,17 @@ const registration = async (username, email, password) => {
 };
 
 const login = async (email, password) => {
-  if (validateEmail(email) || !password) {
-    throw new Error('All fields are required');
+  const user = await UserModel.findOne({ email });
+  if (!user) {
+    throw new Error('User not found');
   }
 
-  //TODO
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    throw new Error('Invalid password');
+  }
+
+  return generateDtoAndTokens(user);
 };
 
 const logout = async (refreshToken) => {

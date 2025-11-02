@@ -18,8 +18,18 @@ const registration = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-    res.send('Login successful');
-  } catch (e) {}
+    const { email, password } = req.body;
+    const userData = await authService.login(email, password);
+
+    res.cookie('refreshToken', userData.refreshToken, {
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+    });
+
+    res.status(200).json(userData);
+  } catch (e) {
+    next(e);
+  }
 };
 
 const logout = async (req, res, next) => {
