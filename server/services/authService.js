@@ -2,14 +2,10 @@ const bcrypt = require('bcrypt');
 const uuid = require('uuid');
 const UserDTO = require('../dtos/UserDTO');
 const UserModel = require('../models/UserModel');
-const { validateUsername, validateEmail } = require('../libs/utils');
 const tokenService = require('./tokenService');
 const mailService = require('./mailService');
 
 const registration = async (username, email, password) => {
-  if (!validateUsername(username) || !validateEmail(email) || !password) {
-    throw new Error('All fields are required');
-  }
   const userExists = await UserModel.findOne({ email });
   if (userExists) {
     throw new Error('User with this email already exists');
@@ -30,7 +26,7 @@ const registration = async (username, email, password) => {
     `${process.env.API_URL}/api/activate/${activationLink}`
   );
 
-  return generateDtoAndTokens(user);
+  return generateDtoAndTokens(newUser);
 };
 
 const login = async (email, password) => {
@@ -65,9 +61,6 @@ const refresh = async (refreshToken) => {
   }
 
   const user = await UserModel.findById(tokenModel.user);
-  const userDTO = new UserDTO(user);
-  const tokens = tokenService.generateTokens({ ...userDTO });
-  await tokenService.saveToken(userDTO.id, tokens.refreshToken);
 
   return generateDtoAndTokens(user);
 };
