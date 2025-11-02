@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const tokenModel = require('../models/tokenModel');
+import jwt from 'jsonwebtoken';
+import tokenModel from '../models/tokenModel.js';
 
 const generateTokens = (payload) => {
   const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
@@ -30,7 +30,7 @@ const deleteToken = async (refreshToken) => {
   await tokenModel.deleteOne({ refreshToken });
 };
 
-module.exports = {
+export default {
   generateTokens,
   saveToken,
   findToken,

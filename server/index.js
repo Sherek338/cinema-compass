@@ -1,11 +1,12 @@
-require('dotenv').config();
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const mongoose = require('mongoose');
+import express from 'express';
+import bodyParser from 'body-parser';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const authRouter = require('./router/authRouter');
+import authRouter from './router/authRouter.js';
 
 const PORT = process.env.PORT || 3000;
 const uri = process.env.DB_URI;

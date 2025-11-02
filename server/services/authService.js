@@ -1,9 +1,10 @@
-const bcrypt = require('bcrypt');
-const uuid = require('uuid');
-const UserDTO = require('../dtos/UserDTO');
-const UserModel = require('../models/UserModel');
-const tokenService = require('./tokenService');
-const mailService = require('./mailService');
+import bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
+
+import UserDTO from '../dtos/UserDTO.js';
+import UserModel from '../models/UserModel.js';
+import tokenService from './tokenService.js';
+import mailService from './mailService.js';
 
 const registration = async (username, email, password) => {
   const userExists = await UserModel.findOne({ email });
@@ -12,7 +13,7 @@ const registration = async (username, email, password) => {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const activationLink = uuid.v4();
+  const activationLink = uuidv4();
 
   const newUser = await UserModel.create({
     username,
@@ -86,7 +87,7 @@ const generateDtoAndTokens = async (user) => {
   return { ...tokens, user: userDTO };
 };
 
-module.exports = {
+export default {
   registration,
   login,
   logout,
