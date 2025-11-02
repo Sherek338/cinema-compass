@@ -30,12 +30,9 @@ const registration = async (username, email, password) => {
     `${process.env.API_URL}/api/activate/${activationLink}`
   );
 
-  const userDTO = new UserDTO(newUser);
-  const tokens = tokenService.generateTokens({ ...userDTO });
-  await tokenService.saveToken(userDTO.id, tokens.refreshToken);
-
-  return { ...tokens, user: userDTO };
+  return generateDtoAndTokens(user);
 };
+
 const login = async (email, password) => {
   if (validateEmail(email) || !password) {
     throw new Error('All fields are required');
@@ -43,9 +40,11 @@ const login = async (email, password) => {
 
   //TODO
 };
+
 const logout = async (refreshToken) => {
   // Logic for user logout
 };
+
 const activate = async (activationLink) => {
   const user = await UserModel.findOne({ activationLink });
   if (!user) {
@@ -58,8 +57,26 @@ const activate = async (activationLink) => {
   user.isActivated = true;
   await user.save();
 };
+
 const refresh = async (refreshToken) => {
-  // Logic for token refresh
+  const tokenModel = await tokenService.findToken(refreshToken);
+  if (!tokenModel) {
+    throw new Error('Unauthorized');
+  }
+
+  const user = await UserModel.findById(tokenModel.user);
+  const userDTO = new UserDTO(user);
+  const tokens = tokenService.generateTokens({ ...userDTO });
+  await tokenService.saveToken(userDTO.id, tokens.refreshToken);
+
+  return generateDtoAndTokens(user);
+};
+
+const generateDtoAndTokens = async (user) => {
+  const userDTO = new UserDTO(user);
+  const tokens = tokenService.generateTokens({ ...userDTO });
+  await tokenService.saveToken(userDTO.id, tokens.refreshToken);
+  return { ...tokens, user: userDTO };
 };
 
 module.exports = {

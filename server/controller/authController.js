@@ -10,7 +10,7 @@ const registration = async (req, res, next) => {
       httpOnly: true,
     });
 
-    res.json(userData);
+    res.status(201).json(userData);
   } catch (e) {
     next(e);
   }
@@ -32,16 +32,28 @@ const activate = async (req, res, next) => {
     const { link } = req.params;
     await authService.activate(link);
 
-    res.status(200);
-    res.json({
+    res.status(200).json({
       message: 'Account activated successfully',
     });
-  } catch (e) {}
+  } catch (e) {
+    next(e);
+  }
 };
 
 const refresh = async (req, res, next) => {
   try {
-  } catch (e) {}
+    const { refreshToken } = req.cookies;
+    const userData = await authService.refresh(refreshToken);
+
+    res.cookie('refreshToken', userData.refreshToken, {
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+    });
+
+    res.status(200).json(userData);
+  } catch (e) {
+    next(e);
+  }
 };
 
 module.exports = {

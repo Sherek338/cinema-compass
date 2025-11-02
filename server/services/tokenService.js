@@ -21,7 +21,13 @@ const saveToken = async (UserID, refreshToken) => {
   return newToken;
 };
 
+const findToken = async (refreshToken) => {
+  const tokenData = await tokenModel.findOne({ refreshToken });
+  return tokenData;
+};
+
 module.exports = {
   generateTokens,
   saveToken,
+  findToken,
 };
