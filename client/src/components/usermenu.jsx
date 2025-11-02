@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 export default function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(true);
-  const [showRegister, setShowRegister] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [isRegister, setIsRegister] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -17,25 +18,27 @@ export default function UserMenu() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setIsMenuOpen(false);
-    setShowRegister(true);
+    setShowAuth(true);
+    setIsRegister(false);
   };
 
-  const handleRegister = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    const endpoint = isRegister ? "http://localhost:5000/api/auth/register" : "http://localhost:5000/api/auth/login";
     try {
-      const res = await fetch("http://localhost:5000/api/register", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
       if (res.ok) {
-        alert("Registration successful!");
-        setShowRegister(false);
+        alert(isRegister ? "Registration successful!" : "Login Successful!");
+        setShowAuth(false);
         setIsLoggedIn(true);
         setFormData({ username: "", email: "", password: "" });
       } else {
-        alert("Registration failed.");
+        alert(`${isRegister ? "Registration" : "Login"} failed.`);
       }
     } catch (err) {
       console.error(err);
@@ -99,22 +102,23 @@ export default function UserMenu() {
         </div>
       ) : (
         <button
-          onClick={() => setShowRegister(true)}
+          onClick={() => {setShowAuth(true); setIsRegister(false);}}
           className="bg-coquelicot text-white px-4 py-2 rounded-full hover:bg-coquelicot/90 transition-colors"
         >
-          Register
+          Login
         </button>
       )}
 
-      {showRegister &&
+      {showAuth &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-lg">
+          <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70 backdrop-blur-lg">
             <div className="relative bg-raisin-black p-8 rounded-2xl shadow-lg w-[90%] max-w-md border border-white/10">
               <h2 className="text-2xl text-white font-semibold mb-4 text-center">
-                Register
+                {isRegister ? "Register" : "Login"}
               </h2>
 
-              <form onSubmit={handleRegister} className="flex flex-col gap-4">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {isRegister && (
                 <input
                   type="text"
                   placeholder="Username"
@@ -125,6 +129,7 @@ export default function UserMenu() {
                   required
                   className="w-full px-4 py-2 rounded-lg bg-transparent border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-coquelicot"
                 />
+                )}
                 <input
                   type="email"
                   placeholder="Email"
@@ -150,12 +155,24 @@ export default function UserMenu() {
                   type="submit"
                   className="bg-coquelicot text-white py-2 rounded-full hover:bg-coquelicot/90 transition-colors"
                 >
-                  Register
+                  {isRegister ? "Register" : "Login"}
                 </button>
               </form>
 
+              <p className="text-center text-gray-400 mt-4 text-sm">
+                {isRegister
+                  ? "Already have an account?"
+                  : "Don't have an account?"}{" "}
+                <button
+                  onClick={() => setIsRegister(!isRegister)}
+                  className="text-coquelicot underline hover:text-coquelicot/80"
+                >
+                  {isRegister ? "Login" : "Register"}
+                </button>
+              </p>
+
               <button
-                onClick={() => setShowRegister(false)}
+                onClick={() => setShowAuth(false)}
                 className="absolute top-3 right-4 text-gray-400 hover:text-white text-lg transition-colors"
               >
                 ✕
