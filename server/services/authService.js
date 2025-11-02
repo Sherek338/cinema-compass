@@ -23,7 +23,7 @@ const registration = async (username, email, password) => {
 
   await mailService.sendActivationLink(
     email,
-    `${process.env.API_URL}/api/activate/${activationLink}`
+    `${process.env.API_URL}/api/auth/activate/${activationLink}`
   );
 
   return generateDtoAndTokens(newUser);
@@ -33,6 +33,9 @@ const login = async (email, password) => {
   const user = await UserModel.findOne({ email });
   if (!user) {
     throw new Error('User not found');
+  }
+  if (!user.isActivated) {
+    throw new Error('Account is not activated');
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -44,7 +47,12 @@ const login = async (email, password) => {
 };
 
 const logout = async (refreshToken) => {
-  // Logic for user logout
+  const tokenData = await tokenService.findToken(refreshToken);
+  if (!tokenData) {
+    throw new Error('Token not found');
+  }
+
+  await tokenService.deleteToken(refreshToken);
 };
 
 const activate = async (activationLink) => {

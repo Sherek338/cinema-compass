@@ -26,8 +26,13 @@ const findToken = async (refreshToken) => {
   return tokenData;
 };
 
+const deleteToken = async (refreshToken) => {
+  await tokenModel.deleteOne({ refreshToken });
+};
+
 module.exports = {
   generateTokens,
   saveToken,
   findToken,
+  deleteToken,
 };

@@ -34,7 +34,15 @@ const login = async (req, res, next) => {
 
 const logout = async (req, res, next) => {
   try {
-  } catch (e) {}
+    const { refreshToken } = req.cookies;
+    await authService.logout(refreshToken);
+
+    res.clearCookie('refreshToken');
+
+    res.status(200).json({ message: 'Logged out successfully' });
+  } catch (e) {
+    next(e);
+  }
 };
 
 const activate = async (req, res, next) => {
