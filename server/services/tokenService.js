@@ -30,9 +30,23 @@ const deleteToken = async (refreshToken) => {
   await tokenModel.deleteOne({ refreshToken });
 };
 
+const verifyToken = (token, type) => {
+  try {
+    const secret =
+      type === 'access'
+        ? process.env.JWT_ACCESS_SECRET
+        : process.env.JWT_REFRESH_SECRET;
+    const userData = jwt.verify(token, secret);
+    return userData;
+  } catch (e) {
+    return null;
+  }
+};
+
 export default {
   generateTokens,
   saveToken,
   findToken,
   deleteToken,
+  verifyToken,
 };
