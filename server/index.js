@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import authRouter from './router/authRouter.js';
+import errorMiddleware from './middleware/errorMiddleware.js';
 
 const PORT = process.env.PORT || 3000;
 const uri = process.env.DB_URI;
@@ -25,6 +26,8 @@ app.use(
 );
 
 app.use('/api/auth', authRouter);
+
+app.use(errorMiddleware);
 
 async function startServer() {
   try {
