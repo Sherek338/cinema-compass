@@ -1,6 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import controller from '../controller/authController.js';
+import ApiError from '../exceptions/ApiError.js';
 
 const router = express.Router();
 
@@ -12,8 +13,7 @@ const usernameValidation = body('username')
 const emailValidation = body('email')
   .trim()
   .isEmail()
-  .withMessage('Invalid email format')
-  .normalizeEmail();
+  .withMessage('Invalid email format');
 
 const passwordValidation = body('password')
   .isLength({ min: 6, max: 56 })
@@ -24,8 +24,9 @@ const passwordValidation = body('password')
 const validationError = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    throw ApiError.BadRequest('Validation failed', errors.array());
   }
+  next();
 };
 
 router.post(

@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import mongoose from 'mongoose';
 
 import UserDTO from '../dtos/UserDTO.js';
 import UserModel from '../models/UserModel.js';
@@ -12,27 +13,32 @@ const registration = async (username, email, password) => {
   session.startTransaction();
 
   try {
-    const userExists = await UserModel.findOne({ email });
+    const userExists = await UserModel.findOne({ email }).session(session);
     if (userExists) {
-      throw new ApiError.BadRequest('User with this email already exists');
+      throw ApiError.BadRequest('User with this email already exists');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const activationLink = uuidv4();
 
-    const newUser = await UserModel.create({
-      username,
-      email,
-      password: hashedPassword,
-      activationLink,
-    });
+    const [newUser] = await UserModel.create(
+      [
+        {
+          username,
+          email,
+          password: hashedPassword,
+          activationLink,
+        },
+      ],
+      { session }
+    );
 
-    const result = generateDtoAndTokens(newUser);
+    const result = await generateDtoAndTokens(newUser, session);
     await session.commitTransaction();
 
     mailService.sendActivationLink(
       email,
-      `${process.env.API_URL}/api/auth/activate/${activationLink}`
+      `${process.env.CLIENT_URL}/activate/${activationLink}`
     );
 
     return result;
@@ -46,37 +52,40 @@ const registration = async (username, email, password) => {
 
 const login = async (email, password) => {
   const user = await UserModel.findOne({ email });
+  if (!user) {
+    throw ApiError.BadRequest('Invalid email or password');
+  }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!user && !isPasswordValid) {
-    throw new ApiError.BadRequest('Invalid email or password');
+  if (!isPasswordValid) {
+    throw ApiError.BadRequest('Invalid email or password');
   }
 
   if (!user.isActivated) {
-    throw new ApiError.BadRequest('Account is not activated');
+    throw ApiError.BadRequest('Account is not activated');
   }
 
-  return generateDtoAndTokens(user);
+  return await generateDtoAndTokens(user);
 };
 
 const logout = async (refreshToken) => {
   if (!refreshToken) {
-    throw new ApiError.BadRequest('Refresh token is required');
+    throw ApiError.BadRequest('Refresh token is required');
   }
 
   const result = await tokenService.deleteToken(refreshToken);
   if (!result.deletedCount) {
-    throw new ApiError.NotFound('Token not found or already deleted');
+    throw ApiError.NotFound('Token not found or already deleted');
   }
 };
 
 const activate = async (activationLink) => {
   const user = await UserModel.findOne({ activationLink });
   if (!user) {
-    throw new ApiError.BadRequest('Invalid activation link');
+    throw ApiError.BadRequest('Invalid activation link');
   }
   if (user.isActivated) {
-    throw new ApiError.BadRequest('Account is already activated');
+    throw ApiError.BadRequest('Account is already activated');
   }
 
   user.isActivated = true;
@@ -84,14 +93,28 @@ const activate = async (activationLink) => {
 };
 
 const refresh = async (refreshToken) => {
+  if (!refreshToken) {
+    throw ApiError.BadRequest('Refresh token is required');
+  }
+  const payload = tokenService.validateRefreshToken(refreshToken);
+  if (!payload) {
+    throw ApiError.BadRequest('Invalid refresh token');
+  }
+
   const tokenModel = await tokenService.findToken(refreshToken);
   if (!tokenModel) {
-    throw new ApiError.Unathorized();
+    throw ApiError.BadRequest('');
   }
 
   const user = await UserModel.findById(tokenModel.user);
+  if (!user) {
+    await tokenService.deleteToken(refreshToken);
+    throw ApiError.BadRequest('User not found');
+  }
 
-  return generateDtoAndTokens(user);
+  const result = await generateDtoAndTokens(user);
+  await tokenService.deleteToken(refreshToken);
+  return result;
 };
 
 const generateDtoAndTokens = async (user) => {

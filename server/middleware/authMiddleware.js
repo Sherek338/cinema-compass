@@ -5,7 +5,7 @@ const authMiddleware = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new ApiError.Unauthorized();
+      throw ApiError.Unauthorized();
     }
 
     const accessToken = authHeader.split(' ')[1];

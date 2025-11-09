@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 
-const letterHtml = `
+const sendActivationLink = async (to, link) => {
+  const letterHtml = `
     <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 40px;">
       <div style="max-width: 600px; margin: auto; background: white; border-radius: 10px; padding: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
         <h1 style="color: #333; text-align: center;">🎉 Добро пожаловать!</h1>
@@ -28,7 +29,6 @@ const letterHtml = `
     </div>
   `;
 
-const sendActivationLink = async (to, link) => {
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,

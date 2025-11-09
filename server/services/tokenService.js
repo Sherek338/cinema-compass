@@ -38,7 +38,7 @@ const findToken = async (refreshToken) => {
 };
 
 const deleteToken = async (refreshToken) => {
-  await tokenModel.deleteOne({ refreshToken });
+  return await tokenModel.deleteOne({ refreshToken });
 };
 
 const validateRefreshToken = (token) => {

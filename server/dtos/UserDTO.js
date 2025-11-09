@@ -4,6 +4,8 @@ class UserDTO {
     this.username = user.username;
     this.email = user.email;
     this.isActivated = user.isActivated;
+    this.favoriteList = user.favoriteList;
+    this.watchList = user.watchList;
   }
 }
 
