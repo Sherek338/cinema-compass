@@ -44,5 +44,11 @@ router.post(
 router.post('/logout', controller.logout);
 router.get('/activate/:link', controller.activate);
 router.get('/refresh', controller.refresh);
+router.get(
+  '/send-mail',
+  [emailValidation],
+  validationError,
+  controller.sendMail
+);
 
 export default router;

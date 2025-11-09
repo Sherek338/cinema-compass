@@ -117,6 +117,19 @@ const refresh = async (refreshToken) => {
   return result;
 };
 
+const sendMail = async (email, link) => {
+  if (!email || !link) {
+    throw ApiError.BadRequest('Email and link are required');
+  }
+
+  const user = await UserModel.findOne({ email });
+  if (!user) {
+    throw ApiError.BadRequest('User not found');
+  }
+
+  mailService.sendActivationLink(email, link);
+};
+
 const generateDtoAndTokens = async (user) => {
   const userDTO = new UserDTO(user);
   const tokens = tokenService.generateTokens({ ...userDTO });
@@ -130,4 +143,5 @@ export default {
   logout,
   activate,
   refresh,
+  sendMail,
 };

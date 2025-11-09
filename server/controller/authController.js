@@ -69,10 +69,25 @@ const refresh = async (req, res, next) => {
   }
 };
 
+const sendMail = async (req, res, next) => {
+  try {
+    const { email, link } = req.body;
+
+    await authService.sendMail(email, link);
+
+    res.status(200).json({
+      message: 'Email sent successfully',
+    });
+  } catch (e) {
+    next(e);
+  }
+};
+
 export default {
   login,
   registration,
   logout,
   activate,
   refresh,
+  sendMail,
 };
