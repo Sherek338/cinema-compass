@@ -1,20 +1,21 @@
-import tokenService from '../services/tokenService.js';
+import jwt from 'jsonwebtoken';
+import ApiError from '../exceptions/ApiError.js';
 
 const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new ApiError.Unauthorized();
+    }
+
+    const accessToken = authHeader.split(' ')[1];
+    let userData = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET);
+
+    req.user = userData;
+    next();
+  } catch (e) {
+    next(e);
   }
-
-  const token = authHeader.split(' ')[1];
-  let userData = tokenService.verifyToken(token, 'access');
-
-  if (!userData) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-
-  req.user = userData;
-  next();
 };
 
 export default authMiddleware;

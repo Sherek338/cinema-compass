@@ -12,12 +12,23 @@ const generateTokens = (payload) => {
 };
 
 const saveToken = async (UserID, refreshToken) => {
-  const token = await tokenModel.findOne({ user: UserID });
-  if (token) {
-    token.refreshToken = refreshToken;
-    return token.save();
+  await tokenModel.deleteMany({
+    user: UserID,
+    createdAt: { $lt: new Date(Date.now() - 2592000) },
+  });
+
+  const numberOfTokens = await tokenModel.countDocuments({ user: UserID });
+  if (numberOfTokens >= 5) {
+    const oldToken = await tokenModel
+      .findOne({ user: UserID })
+      .sort({ createdAt: 1 });
+    await tokenModel.deleteOne({ _id: oldToken._id });
   }
-  const newToken = await tokenModel.create({ user: UserID, refreshToken });
+  const newToken = await tokenModel.create({
+    user: UserID,
+    refreshToken,
+    createdAt: new Date(),
+  });
   return newToken;
 };
 
@@ -30,14 +41,9 @@ const deleteToken = async (refreshToken) => {
   await tokenModel.deleteOne({ refreshToken });
 };
 
-const verifyToken = (token, type) => {
+const validateRefreshToken = (token) => {
   try {
-    const secret =
-      type === 'access'
-        ? process.env.JWT_ACCESS_SECRET
-        : process.env.JWT_REFRESH_SECRET;
-    const userData = jwt.verify(token, secret);
-    return userData;
+    return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
   } catch (e) {
     return null;
   }
@@ -48,5 +54,5 @@ export default {
   saveToken,
   findToken,
   deleteToken,
-  verifyToken,
+  validateRefreshToken,
 };
