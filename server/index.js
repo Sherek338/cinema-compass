@@ -7,40 +7,45 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import authRouter from './router/authRouter.js';
+import errorMiddleware from './middleware/errorMiddleware.js';
 
 const PORT = process.env.PORT || 3000;
-const uri = process.env.DB_URI;
+const URI = process.env.DB_URI;
 const clientOptions = {
   serverApi: { version: '1', strict: true, deprecationErrors: true },
+};
+const corsOptions = {
+  origin: process.env.CLIENT_URL,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
 };
 
 const app = express();
 
 app.use(bodyParser.json());
 app.use(cookieParser());
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL,
-  })
-);
+app.use(cors(corsOptions));
 
 app.use('/api/auth', authRouter);
 
-async function startServer() {
-  try {
-    await mongoose.connect(uri, clientOptions);
-    console.log('Connected to MongoDB');
+app.use(errorMiddleware);
 
-    if (process.env.MODE === 'dev') {
-      app.listen(PORT, () => {
-        console.log(`Server is running on http://localhost:${PORT}`);
-      });
-    }
-  } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
-  }
+mongoose
+  .connect(URI, clientOptions)
+  .then(() => {
+    console.log('MongoDB connection established');
+  })
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+  });
+
+if (process.env.MODE === 'development') {
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
 }
-
-startServer();
 
 export default app;
