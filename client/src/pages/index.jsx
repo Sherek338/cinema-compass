@@ -1,460 +1,125 @@
-import { useState } from "react";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { Hero } from "@/components/hero";
-import { MovieCard } from "@/components/moviecard"
+import { useEffect, useState } from "react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import Hero from "@/components/Hero.jsx";
+import MediaCard from "@/components/MediaCard";
 
-const trendingMovies = [
-    {
-        title: "Superman",
-        year: "2025",
-        duration: "2h 9m",
-        rating: "7.2",
-        image: "https://image.tmdb.org/t/p/original/ombsmhYUqR4qqOLOxAyr5V8hbyv.jpg",
-    },
-    {
-        title: "Weapons",
-        year: "2025",
-        duration: "2h 8m",
-        rating: "6.8",
-        image: "https://image.tmdb.org/t/p/original/42klJcqMwFtwzZHxTtmrd6mEYwl.jpg",
-    },
-    {
-        title: "F1",
-        year: "2025",
-        duration: "2h 36m",
-        rating: "7.8",
-        image: "https://image.tmdb.org/t/p/original/iGyqJwqAHQjRrChcOCo6Nqgkb0B.jpg",
-    },
-    {
-        title: "Mantis",
-        year: "2025",
-        duration: "1h 53m",
-        rating: "5.4",
-        image: "https://image.idntimes.com/post/20250827/1000099269_055b97ae-3be9-4c40-9520-c2374378f49d.jpg",
-    },
-    {
-        title: "KPop Demon Hunters",
-        year: "2025",
-        duration: "1h 36m",
-        rating: "7.6",
-        image: "https://image.tmdb.org/t/p/original/jfS5KEfiwsS35ieZvdUdJKkwLlZ.jpg",
-    },
-    {
-        title: "Nobody 2",
-        year: "2025",
-        duration: "1h 29m",
-        rating: "6.3",
-        image: "https://image.tmdb.org/t/p/original/svXVRoRSu6zzFtCzkRsjZS7Lqpd.jpg",
-    },
-    
+export default function Home() {
+  const [movies, setMovies] = useState([]);
+  const [series, setSeries] = useState([]);
+  const [loadingMovies, setLoadingMovies] = useState(true);
+  const [loadingSeries, setLoadingSeries] = useState(true);
+  const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
-];
+  useEffect(() => {
+    const fetchMovies = async () => {
+      try {
+        setLoadingMovies(true);
+        const res = await fetch(
+          `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&language=en-US&page=1`
+        );
+        const data = await res.json();
+        const mapped = (data.results || []).map((m) => ({
+          id: m.id,
+          title: m.title,
+          year: m.release_date ? m.release_date.slice(0, 4) : "N/A",
+          rating: m.vote_average ? m.vote_average.toFixed(1) : "N/A",
+          poster: m.poster_path
+            ? `https://image.tmdb.org/t/p/w500${m.poster_path}`
+            : "https://via.placeholder.com/400x600?text=No+Image"
+        }));
+        setMovies(mapped);
+      } catch (err) {
+        console.error("Failed to fetch movies:", err);
+      } finally {
+        setLoadingMovies(false);
+      }
+    };
+    fetchMovies();
+  }, [API_KEY]);
 
-const newReleases = [
-    {
-        title: "Ballerina",
-        year: "2025",
-        duration: "2h 4m",
-        rating: "6.9",
-        image: "https://www.deepfocusreview.com/wp-content/uploads/2025/06/Ballerina-movie-poster.png",
-    },
-    {
-        title: "The Fantastic 4: First Steps",
-        year: "2025",
-        duration: "1h 55m",
-        rating: "7.1",
-        image: "https://images.theposterdb.com/prod/public/images/posters/optimized/movies/4498/ALsbFVmdMeLyeWdJd1PnhUG5ya5go4Di97D8gYTR.jpg",
-    },
-    {
-        title: "How to Train Your Dragon",
-        year: "2025",
-        duration: "2h 4m",
-        rating: "6.9",
-        image: "https://mlpnk72yciwc.i.optimole.com/cqhiHLc.IIZS~2ef73/w:auto/h:auto/q:75/https://bleedingcool.com/wp-content/uploads/2025/02/HTD_OnlineOOHTag17_RGB_4.jpg",
-    },
-    {
-        title: "Superman",
-        year: "2025",
-        duration: "2h 9m",
-        rating: "7.2",
-        image: "https://image.tmdb.org/t/p/original/ombsmhYUqR4qqOLOxAyr5V8hbyv.jpg",
-    },
-    {
-        title: "Demon Slayer: Kimetsu no Yaiba Infinity Castle",
-        year: "2025",
-        duration: "2h 36m",
-        rating: "8.6",
-        image: "https://cdn.amkstation.com/wp-content/uploads/2025/03/demon-slayer_-kimetsu-no-yaiba-infinity-castle-theatrical-date-poster-us-768x1085-1.webp",
-    },
-    {
-        title: "The Conjuring: Last Rites",
-        year: "2025",
-        duration: "2h 15m",
-        rating: "6.4",
-        image: "https://m.media-amazon.com/images/M/MV5BZjA4Yzc4MDAtZTIzYy00NDMwLWE2NTAtNDUzZWFhZWM2NmNmXkEyXkFqcGc@._V1_.jpg",
-    },
-];
+  useEffect(() => {
+    const fetchSeries = async () => {
+      try {
+        setLoadingSeries(true);
+        const res = await fetch(
+          `https://api.themoviedb.org/3/tv/popular?api_key=${API_KEY}&language=en-US&page=1`
+        );
+        const data = await res.json();
+        const mapped = (data.results || []).map((s) => ({
+          id: s.id,
+          title: s.name,
+          year: s.first_air_date ? s.first_air_date.slice(0, 4) : "N/A",
+          rating: s.vote_average ? s.vote_average.toFixed(1) : "N/A",
+          poster: s.poster_path
+            ? `https://image.tmdb.org/t/p/w500${s.poster_path}`
+            : "https://via.placeholder.com/400x600?text=No+Image"
+        }));
+        setSeries(mapped);
+      } catch (err) {
+        console.error("Failed to fetch series:", err);
+      } finally {
+        setLoadingSeries(false);
+      }
+    };
+    fetchSeries();
+  }, [API_KEY]);
 
-const topRated = [
-    {
-    title: "Nobody 2",
-    year: "2025",
-    duration: "1h 29m",
-    rating: "6.3",
-    image: "https://image.tmdb.org/t/p/original/svXVRoRSu6zzFtCzkRsjZS7Lqpd.jpg",
-    },
-    {
-        title: "Weapons",
-        year: "2025",
-        duration: "2h 8m",
-        rating: "6.8",
-        image: "https://image.tmdb.org/t/p/original/42klJcqMwFtwzZHxTtmrd6mEYwl.jpg",
-    },
-    {
-        title: "Mission: Impossible - The Final Reckoning",
-        year: "2025",
-        duration: "2h 50m",
-        rating: "7.2",
-        image: "https://m.media-amazon.com/images/M/MV5BMDJhNDUwOTYtOTYyZi00NzQwLWFiYjMtNzM1MTYxNTQ0YjI5XkEyXkFqcGc@._V1_UY1200_CR165,0,630,1200_AL_.jpg",
-    },
-    {
-        title: "F1",
-        year: "2025",
-        duration: "2h 36m",
-        rating: "7.8",
-        image: "https://image.tmdb.org/t/p/original/iGyqJwqAHQjRrChcOCo6Nqgkb0B.jpg",
-    },
-    {
-        title: "Mantis",
-        year: "2025",
-        duration: "1h 53m",
-        rating: "5.4",
-        image: "https://image.idntimes.com/post/20250827/1000099269_055b97ae-3be9-4c40-9520-c2374378f49d.jpg",
-    },
-    {
-        title: "How to Train Your Dragon",
-        year: "2025",
-        duration: "2h 5m",
-        rating: "7.8",
-        image: "https://mlpnk72yciwc.i.optimole.com/cqhiHLc.IIZS~2ef73/w:auto/h:auto/q:75/https://bleedingcool.com/wp-content/uploads/2025/02/HTD_OnlineOOHTag17_RGB_4.jpg",
-    },
+  return (
+    <div className="min-h-screen bg-[#201E1F] flex flex-col">
+      <Header />
+      <main className="flex-1 flex flex-col">
+        <Hero />
 
-];
+        <section className="max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] py-16">
+          <h1 className="text-white font-bold text-[35px] mb-12">Popular Movies</h1>
 
-const watchlist = [
-  {
-    title: "Ballerina",
-    year: "2025",
-    duration: "2h 4m",
-    rating: "6.9",
-    image: "https://www.deepfocusreview.com/wp-content/uploads/2025/06/Ballerina-movie-poster.png",
-  },
-  {
-    title: "F1",
-    year: "2025",
-    duration: "2h 36m",
-    rating: "7.8",
-    image: "https://image.tmdb.org/t/p/original/iGyqJwqAHQjRrChcOCo6Nqgkb0B.jpg",
-    },
-];
+          {loadingMovies ? (
+            <div className="w-full flex justify-center items-center min-h-[300px]">
+              <div className="w-12 h-12 rounded-full border-4 border-[#FF4002] border-t-transparent animate-spin" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+              {movies.slice(0, 10).map((movie) => (
+                <MediaCard
+                  key={movie.id}
+                  id={movie.id}
+                  title={movie.title}
+                  year={movie.year}
+                  rating={movie.rating}
+                  poster={movie.poster}
+                  type="movie"
+                />
+              ))}
+            </div>
+          )}
+        </section>
 
-const trendingSeries = [
-  {
-    title: "Stranger Things",
-    year: "2016-2025",
-    duration: "5 seasons",
-    rating: "8.4",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/uOOtwVbSr4QDjAGIifLDwpb2Pdl.jpg",
-  },
-  {
-    title: "The Last of Us",
-    year: "2023-2025",
-    duration: "2 seasons",
-    rating: "8.7",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/dmo6TYuuJgaYinXBPjrgG9mB5od.jpg",
-  },
-  {
-    title: "Wednesday",
-    year: "2022-2025",
-    duration: "2 seasons",
-    rating: "8.1",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/36xXlhEpQqVVPuiZhfoQuaY4OlA.jpg",
-  },
-  {
-    title: "The Mandalorian",
-    year: "2019-2023",
-    duration: "3 seasons",
-    rating: "8.6",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/sWgBv7LV2PRoQgkxwlibdGXKz1S.jpg",
-  },
-  {
-    title: "Breaking Bad",
-    year: "2008-2013",
-    duration: "5 seasons",
-    rating: "9.5",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg",
-  },
-  {
-    title: "The Crown",
-    year: "2016-2023",
-    duration: "6 seasons",
-    rating: "8.6",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/1DDE0Z2Y805rqfkEjPbZsMLyPwa.jpg",
-  },
-];
+        <section className="max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] pb-16">
+          <h1 className="text-white font-bold text-[35px] mb-12">Popular Series</h1>
 
-const newReleaseSeries = [
-  {
-    title: "Andor",
-    year: "2022-2025",
-    duration: "2 seasons",
-    rating: "8.4",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/khZqmwHQicTYoS7Flreb9EddFZC.jpg",
-  },
-  {
-    title: "House of the Dragon",
-    year: "2022-2024",
-    duration: "2 seasons",
-    rating: "8.5",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/t9XkeE7HzOsdQcDDDapDYh8Rrmt.jpg",
-  },
-  {
-    title: "The Bear",
-    year: "2022-2025",
-    duration: "4 seasons",
-    rating: "8.6",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/eKfVzzEazSIjJMrw9ADa2x8ksLz.jpg",
-  },
-  {
-    title: "The Night Agent",
-    year: "2023-2025",
-    duration: "2 seasons",
-    rating: "7.5",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/4c5yUNcaff4W4aPrkXE6zr7papX.jpg",
-  },
-  {
-    title: "Succession",
-    year: "2018-2023",
-    duration: "4 seasons",
-    rating: "8.9",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/7HW47XbkNQ5fiwQFYGWdw9gs144.jpg",
-  },
-  {
-    title: "The Boys",
-    year: "2019-2024",
-    duration: "4 seasons",
-    rating: "8.7",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/2zmTngn1tYC1AvfnrFLhxeD82hz.jpg",
-  },
-];
-
-const topRatedSeries = [
-  {
-    title: "Breaking Bad",
-    year: "2008-2013",
-    duration: "5 seasons",
-    rating: "9.5",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg",
-  },
-  {
-    title: "Game of Thrones",
-    year: "2011-2019",
-    duration: "8 seasons",
-    rating: "9.2",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
-  },
-  {
-    title: "The Sopranos",
-    year: "1999-2007",
-    duration: "6 seasons",
-    rating: "9.2",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/rTc7ZXdroqjkKivFPvCPX0Ru7uw.jpg",
-  },
-  {
-    title: "The Wire",
-    year: "2002-2008",
-    duration: "5 seasons",
-    rating: "9.3",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/4lbclFySvugI51fwsyxBTOm4DqK.jpg",
-  },
-  {
-    title: "Succession",
-    year: "2018-2023",
-    duration: "4 seasons",
-    rating: "8.9",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/7HW47XbkNQ5fiwQFYGWdw9gs144.jpg",
-  },
-  {
-    title: "Better Call Saul",
-    year: "2015-2022",
-    duration: "6 seasons",
-    rating: "9.0",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/zjg4jpK1Wp2kiRvtt5ND0kznako.jpg",
-  },
-];
-
-const seriesWatchlist = [
-  {
-    title: "Stranger Things",
-    year: "2016-2025",
-    duration: "5 seasons",
-    rating: "8.4",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/uOOtwVbSr4QDjAGIifLDwpb2Pdl.jpg",
-  },
-  {
-    title: "The Last of Us",
-    year: "2023-2025",
-    duration: "2 season",
-    rating: "8.7",
-    image: "https://image.tmdb.org/t/p/w600_and_h900_bestv2/dmo6TYuuJgaYinXBPjrgG9mB5od.jpg",
-  },
-];
-
-export default function Index() {
-    const [activeTab, setActiveTab] = useState("movies");
-    return (
-        <div className="min-h-screen bg-raisin-black">
-            <Header />
-
-            <main className="pt-[75px] lg:pt-[91px]">
-                <Hero />
-
-                <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[70px] py-8 md:py-12 lg-py-16">
-                    <div className="flex items-center justify-center gap-6 md:gap-10 mb-12 md:mb-16">
-                        <button onClick={() => setActiveTab("movies")} className={`flex flex-col items-start gap-[5px] hover:opacity-80 transition-opacity cursor-pointer ${ activeTab === "movies" ? "" : ""}`}>
-                            <h2 className={`text-xl md:text-[25px] ${activeTab === "movies" ? "font-bold text-white" : "font-normal text-white"}`}>Movies</h2>
-                            {activeTab === "movies" && <div className="w-full h-0.5 bg-coquelicot" />}
-                        </button>
-                        <button onClick={() => setActiveTab("series")} className={`flex flex-col items-start gap-[5px] hover:opacity-80 transition-opacity cursor-pointer ${ activeTab === "series" ? "" : ""}`}>
-                            <h2 className={`text-xl md:text-[25px] ${activeTab === "series" ? "font-bold text-white" : "font-normal text-white"}`}>Series</h2>
-                            {activeTab === "series" && <div className="w-full h-0.5 bg-coquelicot" />}
-                        </button>
-                    </div>
-
-            {activeTab === "movies" ? (
-                <>  
-
-                    <section className="mb-12 md:mb-16">
-                        <div className="flex items-end justify-between mb-4 md:mb-6">
-                            <h2 className="text-white text-2xl md:text-[30px] font-bold capitalize"></h2>
-                            <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">View all</a>
-                        </div>
-
-                        <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
-                            {trendingMovies.map((movie, index) => (
-                                <MovieCard key={index} {...movie} />
-                            ))}
-                        </div>
-                    </section>
-                    
-                    <section className="mb-12 md:mb-16">
-                        <div className="flex items-end justify-between mb-4 md:mb-6">
-                            <h2 className="text-white text-2xl md:text-[30px] font-bold capitalize">New Release</h2>
-                            <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">View all</a>
-                        </div> 
-
-                        <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
-                            {newReleases.map((movie, index) => (
-                                <MovieCard key={index} {...movie} />
-                            ))}
-                        </div>
-                    </section>
-                    
-                    <section className="mb-12 md:mb-16">
-                        <div className="flex items-end justify-between mb-4 md:mb-6">
-                            <h2 className="text-white text-2xl md:text-[30px] font-bold capitalize">Top Rated</h2>
-                            <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">View all</a>
-                        </div>
-
-                        <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
-                            {topRated.map((movie, index) => (
-                                <MovieCard key={index} {...movie} />
-                            ))}
-                        </div>
-                    </section>
-
-                    <section className="mb-12 md:mb-16">
-                        <div className="flex items-end justify-between mb-4 md:mb-6">
-                            <h2 className="text-white text-2xl md:text-[30px] font-bold capitalize">My watchlist</h2>
-                            <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">View all</a>
-                        </div>
-
-                        <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
-                            {watchlist.map((movie, index) => (
-                                <MovieCard key={index} {...movie} />
-                            ))}
-                            <div className="shrink-0 flex items-center justify-center w-[200px] h-[273px] border border-[#3F3F3F] bg-[#343434] rounded-sm cursor-pointer hover:border-orange transition-colors group">
-                                <div className="relative w-9 h-9">
-                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-9 h-0.5 bg-white group-hover:bg-coquelicot transition-colors" />
-                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 h-9 bg-white group-hover:bg-coquelicot transition-colors" />
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </>
-            ) : (
-                <>
-                    <section className="mb-12 md:mb-16">
-                        <div className="flex items-end justify-between mb-4 md:mb-6">
-                            <h2 className="text-white text-2xl md:text-[30px] font-bold capitalize">Trending Now</h2>
-                            <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">View all</a>
-                        </div>
-                        <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
-                            {trendingSeries.map((series, index) => (
-                                <MovieCard key={index} {...series} />
-                            ))}
-                        </div>
-                    </section>
-
-                    <section className="mb-12 md:mb-16">
-                        <div className="flex items-end justify-between mb-4 md:mb-6">
-                            <h2 className="text-white text-2xl md:text-[30px] font-bold capitalize">New Release</h2>
-                            <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">View all</a>
-                        </div>
-                        <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
-                            {newReleaseSeries.map((series, index) => (
-                                <MovieCard key={index} {...series} />
-                            ))}
-                        </div>
-                    </section>
-
-                    <section className="mb-12 md:mb-16">
-                        <div className="flex items-end justify-between mb-4 md:mb-6">
-                            <h2 className="text-white text-2xl md:text-[30px] font-bold capitalize">Top Rated</h2>
-                            <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">View all</a>
-                        </div>
-                        <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
-                            {topRatedSeries.map((series, index) => (
-                                <MovieCard key={index} {...series} />
-                            ))}
-                        </div>
-                    </section>
-
-                    <section>
-                        <div className="flex items-end justify-between mb-4 md:mb-6">
-                            <h2 className="text-white text-2xl md:text-[30px] font-bold capitalize">My Watchlist</h2>
-                            <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">View all</a>
-                        </div>
-                        <div className="flex gap-4 md:gap-5 overflow-x-auto scrollbar-hide">
-                            {seriesWatchlist.map((series, index) => (
-                                <MovieCard key={index} {...series} />
-                            ))}
-                        <div className="shrink-0 flex items-center justify-center w-[200px] h-[273px] border border-[#3F3F3F] bg-[#343434] rounded-sm cursor-pointer hover:border-coquelicot transition-colors group">
-                            <div className="relative w-9 h-9">
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-9 h-0.5 bg-white group-hover:bg-coquelicot transition-colors" />
-                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 h-9 bg-white group-hover:bg-coquelicot transition-colors" />
-                            </div>
-                        </div>
-                    </div>
-                </section>
-                </>
-            )}
-            
-                </div>
-            </main>
-
-            <Footer />
-        </div>
-    );
+          {loadingSeries ? (
+            <div className="w-full flex justify-center items-center min-h-[300px]">
+              <div className="w-12 h-12 rounded-full border-4 border-[#FF4002] border-t-transparent animate-spin" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+              {series.slice(0, 10).map((show) => (
+                <MediaCard
+                  key={show.id}
+                  id={show.id}
+                  title={show.title}
+                  year={show.year}
+                  rating={show.rating}
+                  poster={show.poster}
+                  type="series"
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+      <Footer />
+    </div>
+  );
 }

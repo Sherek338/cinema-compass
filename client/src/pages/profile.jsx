@@ -1,190 +1,160 @@
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { MovieCard } from "@/components/moviecard";
-import pfp from "@/assets/Ellipse8.svg"
-
-const favourites = [
-  {
-    title: "Thunderbolts*",
-    year: "2025",
-    duration: "2h 7m",
-    rating: "7.2",
-    image: "https://images.theposterdb.com/prod/public/images/posters/optimized/movies/260063/XyohZzpKEGUqgC4EFBxtSBY7okRv88IxEaeow7rY.jpg",
-  },
-  {
-    title: "The Fantastic 4: First Steps",
-    year: "2025",
-    duration: "1h 55m",
-    rating: "7.1",
-    image: "https://images.theposterdb.com/prod/public/images/posters/optimized/movies/4498/ALsbFVmdMeLyeWdJd1PnhUG5ya5go4Di97D8gYTR.jpg",
-  },
-  {
-    title: "Man of Steel",
-    year: "2013",
-    duration: "2h 23m",
-    rating: "7.1",
-    image: "https://www.themoviedb.org/t/p/original/jydskfZ4y7XgVlFd7aqtj7YZp2B.jpg",
-  },
-  {
-    title: "The Batman",
-    year: "2022",
-    duration: "2h 56m",
-    rating: "7.8",
-    image: "https://www.themoviedb.org/t/p/original/gmU7P3FzGFsl2wiSDhx9znZCNub.jpg",
-  },
-  {
-    title: "28 Years Later",
-    year: "2025",
-    duration: "1h 55m",
-    rating: "6.7",
-    image: "https://m.media-amazon.com/images/M/MV5BYzQ0YzU3ZWYtODNiYS00YTk1LTlkMmMtNjRkOWI2MWI3Yzk1XkEyXkFqcGc@._V1_.jpg",
-  },
-];
-
-const watchlist = [
-  {
-    title: "The Fantastic 4: First Steps",
-    year: "2025",
-    duration: "1h 55m",
-    rating: "7.1",
-    image: "https://images.theposterdb.com/prod/public/images/posters/optimized/movies/4498/ALsbFVmdMeLyeWdJd1PnhUG5ya5go4Di97D8gYTR.jpg",
-  },
-  {
-    title: "KPop Demon Hunters",
-    year: "2025",
-    duration: "1h 36m",
-    rating: "7.6",
-    image: "https://image.tmdb.org/t/p/original/jfS5KEfiwsS35ieZvdUdJKkwLlZ.jpg",
-  },
-  {
-    title: "28 Years Later",
-    year: "2025",
-    duration: "1h 55m",
-    rating: "6.7",
-    image: "https://m.media-amazon.com/images/M/MV5BYzQ0YzU3ZWYtODNiYS00YTk1LTlkMmMtNjRkOWI2MWI3Yzk1XkEyXkFqcGc@._V1_.jpg",
-  },
-  {
-    title: "The Batman",
-    year: "2022",
-    duration: "2h 56m",
-    rating: "7.8",
-    image: "https://www.themoviedb.org/t/p/original/gmU7P3FzGFsl2wiSDhx9znZCNub.jpg",
-  },
-  {
-    title: "Man of Steel",
-    year: "2013",
-    duration: "2h 23m",
-    rating: "7.1",
-    image: "https://www.themoviedb.org/t/p/original/jydskfZ4y7XgVlFd7aqtj7YZp2B.jpg",
-  },
-  {
-    title: "Thunderbolts*",
-    year: "2025",
-    duration: "2h 7m",
-    rating: "7.2",
-    image: "https://images.theposterdb.com/prod/public/images/posters/optimized/movies/260063/XyohZzpKEGUqgC4EFBxtSBY7okRv88IxEaeow7rY.jpg",
-  },
-];
+import { useEffect, useMemo, useState } from "react";
+import Header from "@/components/header.jsx";
+import Footer from "@/components/footer.jsx";
+import { useAuth } from "@/context/authContext.jsx";
+import MediaCard from "@/components/mediacard.jsx";
 
 export default function Profile() {
+  const { isAuthenticated, fetchMe, authHeaders } = useAuth();
+
+  const [me, setMe] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const [favItems, setFavItems] = useState([]);
+  const [watchItems, setWatchItems] = useState([]);
+
+  const TMDB_KEY = import.meta.env.VITE_TMDB_API_KEY;
+  const API_URL = import.meta.env.VITE_API_URL;
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        setLoading(true);
+        if (!isAuthenticated) {
+          setMe(null);
+          setFavItems([]);
+          setWatchItems([]);
+          return;
+        }
+        const user = await fetchMe();
+        if (!cancelled) setMe(user);
+
+        const favIds = user.favoriteList || [];
+        const watchIds = user.watchList || [];
+
+        const load = async (ids) =>
+          Promise.all(
+            ids.map(async (id) => {
+              const r = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_KEY}&language=en-US`);
+              const j = await r.json();
+              return {
+                id: j.id,
+                title: j.title,
+                poster: j.poster_path ? `https://image.tmdb.org/t/p/w500${j.poster_path}` : "https://via.placeholder.com/400x600?text=No+Image",
+                rating: j.vote_average?.toFixed(1) ?? "N/A",
+                year: (j.release_date || "").slice(0, 4) || "—",
+                duration: j.runtime ? `${j.runtime} min` : "—",
+              };
+            })
+          );
+
+        const [fav, watch] = await Promise.all([load(favIds), load(watchIds)]);
+        if (!cancelled) {
+          setFavItems(fav);
+          setWatchItems(watch);
+        }
+      } catch {
+        
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, fetchMe, TMDB_KEY]);
+
+  const removeFrom = async (type, movieId) => {
+    await fetch(`${API_URL}/api/user/${type}`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...authHeaders },
+      body: JSON.stringify({ movieId, action: "remove" }),
+    });
+    if (type === "favorites") setFavItems((p) => p.filter((x) => x.id !== movieId));
+    if (type === "watchlist") setWatchItems((p) => p.filter((x) => x.id !== movieId));
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center bg-[#201E1F]">
+        <div className="w-12 h-12 rounded-full border-4 border-[#FF4002] border-t-transparent animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!me) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#201E1F] text-white justify-center items-center gap-4">
+        <p className="text-lg">Please log in again.</p>
+        <a href="/" className="px-6 py-2 rounded bg-[#FF4002] font-semibold hover:bg-[#ff5722] transition">
+          Go Home
+        </a>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-raisin-black">
+    <div className="min-h-screen bg-[#201E1F] flex flex-col">
       <Header />
-      
-      <main className="pt-[91px]">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[70px] py-8 md:py-12 lg:py-16">
-          
-          <h1 className="text-white text-3xl md:text-[35px] font-bold mb-8 md:mb-12">
-            My profile
-          </h1>
+      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] py-16">
+        <h1 className="text-white font-bold text-[35px] mb-10">My Profile</h1>
 
-          <div className="flex items-center gap-4 mb-12 md:mb-20">
-            <div className="w-16 h-16 md:w-[71px] md:h-[71px] rounded-full bg-linear-to-br from-coquelicot to-orange-600 flex items-center justify-center">
-              <img src={pfp} alt="User pfp" />
+        <div className="flex flex-col lg:flex-row gap-10">
+          <aside className="w-full lg:w-[300px] bg-[#2B2A2B] p-6 rounded-xl flex flex-col gap-6 shadow-lg">
+            <div>
+              <h2 className="text-white font-semibold text-2xl mb-1">{me.username}</h2>
+              <p className="text-[#999]">{me.email}</p>
             </div>
-            <h2 className="text-white text-xl md:text-[25px] font-normal">James</h2>
-          </div>
+            <div>
+              <p className="text-white font-medium">Status:</p>
+              <p className={`font-semibold ${me.isActivated ? "text-green-400" : "text-yellow-400"}`}>
+                {me.isActivated ? "Activated" : "Not Activated"}
+              </p>
+            </div>
+          </aside>
 
-          <section className="mb-12 md:mb-16">
-            <div className="flex items-end justify-between mb-5 md:mb-6">
-              <h2 className="text-white text-2xl md:text-[30px] font-bold">Favourites</h2>
-              <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">
-                View all
-              </a>
-            </div>
-            <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
-              {favourites.map((movie, index) => (
-                <MovieCard key={index} {...movie} />
-              ))}
-            </div>
-          </section>
-
-          <section className="mb-12 md:mb-16">
-            <div className="flex items-end justify-between mb-5 md:mb-6">
-              <h2 className="text-white text-2xl md:text-[30px] font-bold">My Watchlist</h2>
-              <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">
-                View all
-              </a>
-            </div>
-            <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
-              {watchlist.map((movie, index) => (
-                <MovieCard key={index} {...movie} />
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <div className="flex items-end justify-between mb-5 md:mb-6">
-              <h2 className="text-white text-2xl md:text-[30px] font-bold">My Reviews</h2>
-              <a href="#" className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">
-                View all
-              </a>
-            </div>
-            
-            <div className="w-full max-w-[310px] bg-coquelicot rounded-[20px] p-5">
-              <div className="mb-6">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="text-white text-[20px] font-semibold mb-1">James</h3>
-                    <div className="flex items-center gap-1.5 text-white text-xs">
-                      <span className="font-semibold">Posted on:</span>
-                      <span className="font-normal">11 Jul 2025</span>
+          <section className="flex-1 flex flex-col gap-12">
+            <div>
+              <h2 className="text-white font-bold text-2xl mb-5">Favorites</h2>
+              {favItems.length ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+                  {favItems.map((m) => (
+                    <div key={m.id} className="relative">
+                      <MediaCard id={m.id} title={m.title} poster={m.poster} rating={m.rating} year={m.year} duration={m.duration} isSeries={false} />
+                      <button onClick={() => removeFrom("favorites", m.id)} className="absolute top-2 right-2 text-xs px-2 py-1 bg-black/60 rounded hover:bg-black/80">
+                        Remove
+                      </button>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-0.5">
-                    {[...Array(4)].map((_, i) => (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 19 19" fill="none" key={i}>
-                            <path d="M16.346 8.95142C16.9889 8.37204 16.6422 7.30502 15.7815 7.21413L12.5461 6.87245C12.1912 6.83497 11.8832 6.61116 11.7378 6.28519L10.4136 3.31494C10.0612 2.52454 8.9393 2.52454 8.58691 3.31494L7.26266 6.28519C7.11732 6.61116 6.80927 6.83497 6.45434 6.87245L3.21894 7.21413C2.35832 7.30502 2.01163 8.37204 2.65447 8.95142L5.07101 11.1294C5.33613 11.3684 5.4538 11.7305 5.37978 12.0796L4.70524 15.261C4.52574 16.1076 5.43341 16.7671 6.18308 16.3347L9.00065 14.7098C9.30985 14.5314 9.69064 14.5314 9.99983 14.7098L12.8174 16.3347C13.5671 16.7671 14.4747 16.1076 14.2952 15.261L13.6207 12.0796C13.5467 11.7305 13.6644 11.3684 13.9295 11.1294L16.346 8.95142Z" fill="#F5C519"/>
-                        </svg>
-                    ))}
-                    <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 19 19" fill="none">
-                        <path d="M16.346 8.95142C16.9889 8.37204 16.6422 7.30502 15.7815 7.21413L12.5461 6.87245C12.1912 6.83497 11.8832 6.61116 11.7378 6.28519L10.4136 3.31494C10.0612 2.52454 8.9393 2.52454 8.58691 3.31494L7.26266 6.28519C7.11732 6.61116 6.80927 6.83497 6.45434 6.87245L3.21894 7.21413C2.35832 7.30502 2.01163 8.37204 2.65447 8.95142L5.07101 11.1294C5.33613 11.3684 5.4538 11.7305 5.37978 12.0796L4.70524 15.261C4.52574 16.1076 5.43341 16.7671 6.18308 16.3347L9.00065 14.7098C9.30985 14.5314 9.69064 14.5314 9.99983 14.7098L12.8174 16.3347C13.5671 16.7671 14.4747 16.1076 14.2952 15.261L13.6207 12.0796C13.5467 11.7305 13.6644 11.3684 13.9295 11.1294L16.346 8.95142Z" fill="#CACACA"/>
-                    </svg>
-                  </div>
+                  ))}
                 </div>
-                
-                <div className="relative">
-                  <p className="text-white text-[15px] font-normal leading-relaxed text-justify">
-                    "Just a fun time watching this iteration of Superman. David Corenswet and Rachel Brosnahan were absolutely wonderful together and Nicholas Hoult played a great Lex Luthor.
-                    <span className="text-white/65 text-[13px] font-semibold ml-1">...Read more</span>
-                  </p>
+              ) : (
+                <p className="text-[#999]">No favorites yet.</p>
+              )}
+            </div>
+
+            <div>
+              <h2 className="text-white font-bold text-2xl mb-5">Watchlist</h2>
+              {watchItems.length ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+                  {watchItems.map((m) => (
+                    <div key={m.id} className="relative">
+                      <MediaCard id={m.id} title={m.title} poster={m.poster} rating={m.rating} year={m.year} duration={m.duration} isSeries={false} />
+                      <button onClick={() => removeFrom("watchlist", m.id)} className="absolute top-2 right-2 text-xs px-2 py-1 bg-black/60 rounded hover:bg-black/80">
+                        Remove
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <button className="text-white text-[15px] font-bold italic hover:opacity-80 transition-opacity">
-                  Edit
-                </button>
-                <button className="text-white text-[15px] font-bold italic hover:opacity-80 transition-opacity">
-                  Delete
-                </button>
-              </div>
+              ) : (
+                <p className="text-[#999]">Your watchlist is empty.</p>
+              )}
             </div>
           </section>
         </div>
       </main>
-
       <Footer />
     </div>
   );

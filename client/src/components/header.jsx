@@ -1,74 +1,148 @@
-import { Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Search, X, Menu } from "lucide-react";
+import { useAuth } from "@/context/authContext.jsx";
 import logo from "@/assets/logo.svg";
-import UserMenu from "@/components/usermenu";
-import { Link } from "react-router-dom";
+import UserMenu from "@/components/usermenu.jsx";
 
+export default function Header() {
+  const { isAuthenticated, setModalOpen, fetchMe } = useAuth();
+  const [q, setQ] = useState("");
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const navigate = useNavigate();
 
+  useEffect(() => {
+    fetchMe().catch(() => {});
+  }, []);
 
-export function Header() {
+  const onSubmit = (e) => {
+    e.preventDefault();
+    const term = q.trim();
+    if (!term) return;
+    setMobileOpen(false);
+    navigate(`/search?q=${encodeURIComponent(term)}`);
+  };
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-raisin-black/80 backdrop-blur-sm">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[70px] py-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 lg:gap-[51px]">
-            <Link to="/">
-            <img
-              src={logo}
-              alt="CinemaCompass Logo"
-              className="w-10 h-10 lg:w-[60px] lg:h-[61px]"
-            />
+    <header className="app-header fixed top-0 left-0 right-0 z-50 bg-[#0c0c0c]/92 backdrop-blur">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-[70px]">
+        <div className="row justify-between gap-4 w-full">
+          <div className="flex items-center gap-4 lg:gap-[42px]">
+            <Link to="/" className="inline-flex items-center">
+              <img
+                src={logo}
+                alt="CinemaCompass"
+                className="w-9 h-9 lg:w-[56px] lg:h-[56px]"
+              />
             </Link>
-            
-            <nav className="hidden lg:flex items-center gap-[30px]">
-              <Link to="/" className="text-white text-[20px] font-normal hover:text-coquelicot transition-colors">
-                Home
-              </Link>
-              <Link to="/movies" className="text-white text-[20px] font-normal hover:text-coquelicot transition-colors">
-                Movies
-              </Link>
-              <Link to="#" className="text-white text-[20px] font-normal hover:text-coquelicot transition-colors">
-                Series
-              </Link>
-              <Link to="#" className="text-white text-[20px] font-normal hover:text-coquelicot transition-colors">
-                My watchlist
-              </Link>
-              <Link to="#" className="text-white text-[20px] font-normal hover:text-coquelicot transition-colors">
-                Favourites
-              </Link>
+
+            <nav className="hidden md:flex items-center gap-[22px] lg:gap-[28px]">
+              <Link to="/" className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot">Home</Link>
+              <Link to="/movies" className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot">Movies</Link>
+              <Link to="/series" className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot">Series</Link>
+              {isAuthenticated && (
+                <>
+                  <Link to="/watchlist" className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot">Watchlist</Link>
+                  <Link to="/favorites" className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot">Favorites</Link>
+                </>
+              )}
             </nav>
           </div>
 
-          <div className="flex items-center gap-3 lg:gap-7">
-            <div className="relative hidden md:block">
+          <div className="flex items-center gap-3 lg:gap-6">
+            <form onSubmit={onSubmit} className="relative hidden md:block">
               <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
                 type="text"
                 placeholder="Search"
-                className="w-48 lg:w-[420px] h-9 px-5 py-2 bg-transparent border border-white rounded-full text-[15px] text-white placeholder:text-[#9B9B9B] focus:outline-none focus:border-coquelicot transition-colors"
+                className="w-48 lg:w-[420px] h-10 px-5 bg-transparent border border-white/80 rounded-full text-[15px] text-white placeholder:text-[#9B9B9B] focus:outline-none focus:border-coquelicot transition-colors"
               />
-              <Search className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white" />
-            </div>
+              <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2">
+                <Search className="w-5 h-5 text-white" />
+              </button>
+            </form>
 
-            <button className="md:hidden text-white p-2">
-              <Search className="w-5 h-5" />
+            <button
+              className="md:hidden p-2 rounded hover:bg-white/10 transition"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5 text-white" />
             </button>
-             <UserMenu />
-            {/* <a href="/profile" className="flex items-center gap-2 lg:gap-2.5 hover:opacity-80 transition-opacity cursor-pointer">
-            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30" fill="none">
-                <g clip-path="url(#clip0_55_1708)">
-                    <path d="M9.80897 15.0659C4.61671 17.1354 0.933839 22.2027 0.933845 28.125C0.933373 28.2487 0.957395 28.3713 1.00453 28.4857C1.05166 28.6001 1.12096 28.7041 1.20845 28.7916C1.29594 28.879 1.39988 28.9483 1.51428 28.9955C1.62868 29.0426 1.75128 29.0666 1.87501 29.0662H28.125C28.3736 29.0652 28.6117 28.9655 28.7868 28.789C28.9619 28.6125 29.0598 28.3736 29.0588 28.125C29.0588 22.2033 25.377 17.1358 20.1856 15.0659C18.75 16.1917 16.9489 16.8713 14.9963 16.8713C13.0434 16.8713 11.2433 16.1921 9.80897 15.0659Z" fill="white"/>
-                    <path d="M14.9965 0.941162C10.8654 0.941162 7.50196 4.30467 7.50195 8.43567C7.50196 12.5667 10.8654 15.9375 14.9965 15.9375C19.1275 15.9375 22.4983 12.5667 22.4983 8.43567C22.4983 4.30467 19.1275 0.941162 14.9965 0.941162Z" fill="white"/>
-                </g>
-                <defs>
-                    <clipPath id="clip0_55_1708">
-                        <rect width="30" height="30" fill="white"/>
-                    </clipPath>
-                </defs>
-            </svg>
-              <span className="hidden sm:inline text-white text-base lg:text-[18px] font-normal">James</span>
-            </a> */}
+
+            {isAuthenticated ? (
+              <UserMenu />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="bg-coquelicot text-white px-4 py-2 rounded-full hover:bg-coquelicot/90 transition"
+              >
+                Login
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Mobile sheet */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/90">
+          <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-[70px] h-full flex flex-col">
+            <div className="flex items-center justify-between h-[64px]">
+              <span className="text-white/80">Menu</span>
+              <button
+                className="p-2 rounded hover:bg-white/10 transition"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Close menu"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
+            </div>
+
+            <form onSubmit={onSubmit} className="flex items-center gap-2 mb-6">
+              <div className="relative flex-1">
+                <input
+                  autoFocus
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  type="text"
+                  placeholder="Search"
+                  className="w-full h-11 px-4 bg-transparent border border-white/80 rounded-full text-[15px] text-white placeholder:text-[#9B9B9B] focus:outline-none focus:border-coquelicot transition-colors"
+                />
+                <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <Search className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </form>
+
+            <nav className="flex flex-col gap-4 mt-2">
+              <Link onClick={() => setMobileOpen(false)} to="/" className="text-white text-2xl">Home</Link>
+              <Link onClick={() => setMobileOpen(false)} to="/movies" className="text-white text-2xl">Movies</Link>
+              <Link onClick={() => setMobileOpen(false)} to="/series" className="text-white text-2xl">Series</Link>
+              {isAuthenticated && (
+                <>
+                  <Link onClick={() => setMobileOpen(false)} to="/watchlist" className="text-white text-2xl">Watchlist</Link>
+                  <Link onClick={() => setMobileOpen(false)} to="/favorites" className="text-white text-2xl">Favorites</Link>
+                </>
+              )}
+            </nav>
+
+            {!isAuthenticated && (
+              <button
+                onClick={() => {
+                  setMobileOpen(false);
+                  setModalOpen(true);
+                }}
+                className="mt-auto mb-8 self-start bg-coquelicot text-white px-5 py-2.5 rounded-full hover:bg-coquelicot/90 transition"
+              >
+                Login / Register
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
