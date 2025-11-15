@@ -16,8 +16,13 @@ class ApiError extends Error {
   static NotFound(message = 'Resource not found') {
     return new ApiError(404, message);
   }
+
   static Conflict(message = 'Conflict occurred') {
     return new ApiError(409, message);
+  }
+
+  static Forbidden(message = 'Access is forbidden') {
+    return new ApiError(403, message);
   }
 }
 

@@ -8,7 +8,7 @@ dotenv.config();
 
 import authRouter from './router/authRouter.js';
 import movieListRouter from './router/movieListRouter.js';
-import reviewRouter from './router/movieListRouter.js';
+import reviewRouter from './router/reviewRouter.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
 
 const PORT = process.env.PORT || 3000;
