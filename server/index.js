@@ -1,5 +1,4 @@
 import path from 'path';
-import { fileURLToPath } from 'url';
 import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
@@ -7,10 +6,11 @@ import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config();
 
-dotenv.config({ path: path.join(__dirname, '.env') });
+for (const item of Object.keys(process.env)) {
+  console.log(`${item}=${process.env[item]}`);
+}
 
 import authRouter from './router/authRouter.js';
 import userRouter from './router/userRouter.js';
@@ -47,7 +47,9 @@ app.use(cookieParser());
 app.use(bodyParser.json({ limit: '1mb' }));
 
 app.get('/api/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', mode: MODE, time: new Date().toISOString() });
+  res
+    .status(200)
+    .json({ status: 'ok', mode: MODE, time: new Date().toISOString() });
 });
 
 app.use('/api/auth', authRouter);

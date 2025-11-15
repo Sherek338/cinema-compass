@@ -1,11 +1,26 @@
-import { useEffect, useState } from "react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import MediaCard from "@/components/MediaCard";
+import { useEffect, useState } from 'react';
+import Header from '@/components/header';
+import Footer from '@/components/footer';
+import MediaCard from '@/components/mediacard';
 
 const genres = [
-  "Drama","Sci-Fi","Crime","Fantasy","Action","Adventure","Comedy","Thriller",
-  "Mystery","Horror","Historical","Family","Animation","Superhero","War","Western","Documentary"
+  'Drama',
+  'Sci-Fi',
+  'Crime',
+  'Fantasy',
+  'Action',
+  'Adventure',
+  'Comedy',
+  'Thriller',
+  'Mystery',
+  'Horror',
+  'Historical',
+  'Family',
+  'Animation',
+  'Superhero',
+  'War',
+  'Western',
+  'Documentary',
 ];
 
 export default function Series() {
@@ -26,16 +41,16 @@ export default function Series() {
         const mapped = (data.results || []).map((tv) => ({
           id: tv.id,
           title: tv.name,
-          year: tv.first_air_date ? tv.first_air_date.slice(0,4) : "N/A",
-          rating: tv.vote_average ? tv.vote_average.toFixed(1) : "N/A",
+          year: tv.first_air_date ? tv.first_air_date.slice(0, 4) : 'N/A',
+          rating: tv.vote_average ? tv.vote_average.toFixed(1) : 'N/A',
           poster: tv.poster_path
             ? `https://image.tmdb.org/t/p/w500${tv.poster_path}`
-            : "https://via.placeholder.com/400x600?text=No+Image"
+            : 'https://via.placeholder.com/400x600?text=No+Image',
         }));
         setTvShows(mapped);
         setTotalPages(data.total_pages || 1);
       } catch (err) {
-        console.error("Failed to fetch series:", err);
+        console.error('Failed to fetch series:', err);
       } finally {
         setLoading(false);
       }
@@ -58,11 +73,15 @@ export default function Series() {
                 <h3 className="text-white text-lg font-normal">Release date</h3>
                 <div className="flex items-center gap-2.5">
                   <div className="flex items-center gap-[5px]">
-                    <span className="text-[#999] text-[15px] font-normal">from</span>
+                    <span className="text-[#999] text-[15px] font-normal">
+                      from
+                    </span>
                     <div className="w-[61px] h-[23px] rounded-[5px] bg-[#D9D9D9]"></div>
                   </div>
                   <div className="flex items-center gap-[5px]">
-                    <span className="text-[#999] text-[15px] font-normal">to</span>
+                    <span className="text-[#999] text-[15px] font-normal">
+                      to
+                    </span>
                     <div className="w-[61px] h-[23px] rounded-[5px] bg-[#D9D9D9]"></div>
                   </div>
                 </div>
@@ -72,9 +91,13 @@ export default function Series() {
                 <div className="w-full h-[23px] rounded-[5px] border border-[#D9D9D9]"></div>
                 <div className="flex flex-col gap-[5px]">
                   {[
-                    genres.slice(0, 2), genres.slice(2, 4), genres.slice(4, 6),
-                    genres.slice(6, 8), genres.slice(8, 11),
-                    genres.slice(11, 14), genres.slice(14)
+                    genres.slice(0, 2),
+                    genres.slice(2, 4),
+                    genres.slice(4, 6),
+                    genres.slice(6, 8),
+                    genres.slice(8, 11),
+                    genres.slice(11, 14),
+                    genres.slice(14),
                   ].map((row, idx) => (
                     <div key={idx} className="flex flex-wrap gap-[5px]">
                       {row.map((genre) => (

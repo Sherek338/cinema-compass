@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/context/authContext';
 
 export function Footer() {
   const { isAuthenticated } = useAuth();
@@ -12,21 +12,36 @@ export function Footer() {
       <div className="relative max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[70px] py-8 lg:py-[46px]">
         <div className="flex flex-col md:flex-row items-start justify-between gap-8">
           <nav className="flex flex-col gap-2.5">
-            <Link to="/" className="text-white text-[18px] font-semibold hover:opacity-80">
+            <Link
+              to="/"
+              className="text-white text-[18px] font-semibold hover:opacity-80"
+            >
               Home
             </Link>
-            <Link to="/movies" className="text-white text-[18px] font-semibold hover:opacity-80">
+            <Link
+              to="/movies"
+              className="text-white text-[18px] font-semibold hover:opacity-80"
+            >
               Movies
             </Link>
-            <Link to="/series" className="text-white text-[18px] font-semibold hover:opacity-80">
+            <Link
+              to="/series"
+              className="text-white text-[18px] font-semibold hover:opacity-80"
+            >
               Series
             </Link>
             {isAuthenticated && (
               <>
-                <Link to="/watchlist" className="text-white text-[18px] font-semibold hover:opacity-80">
+                <Link
+                  to="/watchlist"
+                  className="text-white text-[18px] font-semibold hover:opacity-80"
+                >
                   My Watchlist
                 </Link>
-                <Link to="/favorites" className="text-white text-[18px] font-semibold hover:opacity-80">
+                <Link
+                  to="/favorites"
+                  className="text-white text-[18px] font-semibold hover:opacity-80"
+                >
                   Favorites
                 </Link>
               </>
@@ -38,9 +53,6 @@ export function Footer() {
         </div>
       </div>
     </footer>
-    
   );
-  
 }
 export default Footer;
-

@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import Hero from "@/components/Hero.jsx";
-import MediaCard from "@/components/MediaCard";
+import { useEffect, useState } from 'react';
+import Header from '@/components/header';
+import Footer from '@/components/footer';
+import Hero from '@/components/hero.jsx';
+import MediaCard from '@/components/mediacard';
 
 export default function Home() {
   const [movies, setMovies] = useState([]);
@@ -22,15 +22,15 @@ export default function Home() {
         const mapped = (data.results || []).map((m) => ({
           id: m.id,
           title: m.title,
-          year: m.release_date ? m.release_date.slice(0, 4) : "N/A",
-          rating: m.vote_average ? m.vote_average.toFixed(1) : "N/A",
+          year: m.release_date ? m.release_date.slice(0, 4) : 'N/A',
+          rating: m.vote_average ? m.vote_average.toFixed(1) : 'N/A',
           poster: m.poster_path
             ? `https://image.tmdb.org/t/p/w500${m.poster_path}`
-            : "https://via.placeholder.com/400x600?text=No+Image"
+            : 'https://via.placeholder.com/400x600?text=No+Image',
         }));
         setMovies(mapped);
       } catch (err) {
-        console.error("Failed to fetch movies:", err);
+        console.error('Failed to fetch movies:', err);
       } finally {
         setLoadingMovies(false);
       }
@@ -49,15 +49,15 @@ export default function Home() {
         const mapped = (data.results || []).map((s) => ({
           id: s.id,
           title: s.name,
-          year: s.first_air_date ? s.first_air_date.slice(0, 4) : "N/A",
-          rating: s.vote_average ? s.vote_average.toFixed(1) : "N/A",
+          year: s.first_air_date ? s.first_air_date.slice(0, 4) : 'N/A',
+          rating: s.vote_average ? s.vote_average.toFixed(1) : 'N/A',
           poster: s.poster_path
             ? `https://image.tmdb.org/t/p/w500${s.poster_path}`
-            : "https://via.placeholder.com/400x600?text=No+Image"
+            : 'https://via.placeholder.com/400x600?text=No+Image',
         }));
         setSeries(mapped);
       } catch (err) {
-        console.error("Failed to fetch series:", err);
+        console.error('Failed to fetch series:', err);
       } finally {
         setLoadingSeries(false);
       }
@@ -72,7 +72,9 @@ export default function Home() {
         <Hero />
 
         <section className="max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] py-16">
-          <h1 className="text-white font-bold text-[35px] mb-12">Popular Movies</h1>
+          <h1 className="text-white font-bold text-[35px] mb-12">
+            Popular Movies
+          </h1>
 
           {loadingMovies ? (
             <div className="w-full flex justify-center items-center min-h-[300px]">
@@ -96,7 +98,9 @@ export default function Home() {
         </section>
 
         <section className="max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] pb-16">
-          <h1 className="text-white font-bold text-[35px] mb-12">Popular Series</h1>
+          <h1 className="text-white font-bold text-[35px] mb-12">
+            Popular Series
+          </h1>
 
           {loadingSeries ? (
             <div className="w-full flex justify-center items-center min-h-[300px]">
