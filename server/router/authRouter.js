@@ -29,12 +29,26 @@ const validationError = (req, res, next) => {
   next();
 };
 
-router.post('/login', [emailValidation, passwordValidation], validationError, controller.login);
-router.post('/registration', [usernameValidation, emailValidation, passwordValidation], validationError, controller.registration);
+router.post(
+  '/login',
+  [emailValidation, passwordValidation],
+  validationError,
+  controller.login
+);
+router.post(
+  '/registration',
+  [usernameValidation, emailValidation, passwordValidation],
+  validationError,
+  controller.registration
+);
 router.post('/logout', controller.logout);
 router.get('/activate/:link', controller.activate);
 router.get('/refresh', controller.refresh);
-
-router.post('/send-mail', [emailValidation], validationError, controller.sendMail);
+router.get(
+  '/send-mail',
+  [emailValidation],
+  validationError,
+  controller.sendMail
+);
 
 export default router;
