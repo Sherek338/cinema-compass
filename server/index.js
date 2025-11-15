@@ -7,6 +7,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import authRouter from './router/authRouter.js';
+import movieListRouter from './router/movieListRouter.js';
+import reviewRouter from './router/reviewRouter.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
 
 const PORT = process.env.PORT || 3000;
@@ -30,6 +32,8 @@ app.use(cookieParser());
 app.use(cors(corsOptions));
 
 app.use('/api/auth', authRouter);
+app.use('/api/movielist', movieListRouter);
+app.use('/api/review', reviewRouter);
 
 app.use(errorMiddleware);
 
