@@ -107,8 +107,14 @@ export function AuthProvider({ children }) {
           body: JSON.stringify({ username, email, password }),
         });
 
-        setUser(data.user);
-        setAccessToken(data.accessToken);
+        if (data.user.isActivated === false) {
+          alert(
+            'Registration successful! Please check your email to activate your account.'
+          );
+        } else {
+          setUser(data.user);
+          setAccessToken(data.accessToken);
+        }
         return data;
       } catch (error) {
         throw error;
