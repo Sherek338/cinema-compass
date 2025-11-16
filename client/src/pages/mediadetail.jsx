@@ -1,20 +1,29 @@
 import { useEffect, useState } from "react";
-import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
+import { useParams, useLocation, Link } from "react-router-dom";
 import Header from "@/components/Header.jsx";
 import Footer from "@/components/Footer.jsx";
 import { Heart } from "lucide-react";
 import { useAuth } from "@/context/authContext.jsx";
 
 const imageUrl = (path, size = "w780") =>
-  path ? `https://image.tmdb.org/t/p/${size}${path}` : "https://via.placeholder.com/400x600?text=No+Image";
+  path
+    ? `https://image.tmdb.org/t/p/${size}${path}`
+    : "https://via.placeholder.com/400x600?text=No+Image";
 
 export default function MediaDetail() {
   const { id } = useParams();
   const location = useLocation();
-  const navigate = useNavigate();
   const isSeries = location.pathname.includes("/series");
 
-  const { isAuthenticated, authHeaders, fetchMe } = useAuth();
+  const {
+    isAuthenticated,
+    watchList,
+    favoriteList,
+    addToWatchlist,
+    removeFromWatchlist,
+    addToFavorites,
+    removeFromFavorites,
+  } = useAuth();
 
   const [details, setDetails] = useState(null);
   const [credits, setCredits] = useState(null);
@@ -22,15 +31,12 @@ export default function MediaDetail() {
   const [reviews, setReviews] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [inWatchlist, setInWatchlist] = useState(false);
-  const [inFavorites, setInFavorites] = useState(false);
   const [activeReview, setActiveReview] = useState(null);
   const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
   const [photoViewerIndex, setPhotoViewerIndex] = useState(0);
   const [fullCastOpen, setFullCastOpen] = useState(false);
 
   const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
-  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     let cancelled = false;
@@ -41,11 +47,21 @@ export default function MediaDetail() {
         setLoading(true);
 
         const [dRes, cRes, iRes, rRes, recRes] = await Promise.all([
-          fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}&language=en-US`),
-          fetch(`https://api.themoviedb.org/3/${type}/${id}/credits?api_key=${API_KEY}&language=en-US`),
-          fetch(`https://api.themoviedb.org/3/${type}/${id}/images?api_key=${API_KEY}`),
-          fetch(`https://api.themoviedb.org/3/${type}/${id}/reviews?api_key=${API_KEY}&language=en-US`),
-          fetch(`https://api.themoviedb.org/3/${type}/${id}/recommendations?api_key=${API_KEY}&language=en-US&page=1`),
+          fetch(
+            `https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}&language=en-US`
+          ),
+          fetch(
+            `https://api.themoviedb.org/3/${type}/${id}/credits?api_key=${API_KEY}&language=en-US`
+          ),
+          fetch(
+            `https://api.themoviedb.org/3/${type}/${id}/images?api_key=${API_KEY}`
+          ),
+          fetch(
+            `https://api.themoviedb.org/3/${type}/${id}/reviews?api_key=${API_KEY}&language=en-US`
+          ),
+          fetch(
+            `https://api.themoviedb.org/3/${type}/${id}/recommendations?api_key=${API_KEY}&language=en-US&page=1`
+          ),
         ]);
 
         const [d, c, i, rv, rec] = await Promise.all([
@@ -71,30 +87,12 @@ export default function MediaDetail() {
       }
     };
 
-    const loadMembership = async () => {
-      try {
-        if (!isAuthenticated) {
-          setInFavorites(false);
-          setInWatchlist(false);
-          return;
-        }
-        const me = await fetchMe();
-        const movieId = Number(id);
-        setInWatchlist(Boolean(me.watchList?.includes(movieId)));
-        setInFavorites(Boolean(me.favoriteList?.includes(movieId)));
-      } catch {
-        setInFavorites(false);
-        setInWatchlist(false);
-      }
-    };
-
     fetchAll();
-    loadMembership();
 
     return () => {
       cancelled = true;
     };
-  }, [id, isSeries, API_KEY, isAuthenticated, fetchMe]);
+  }, [id, isSeries, API_KEY]);
 
   useEffect(() => {
     const anyModalOpen = photoViewerOpen || !!activeReview || fullCastOpen;
@@ -127,22 +125,11 @@ export default function MediaDetail() {
     };
   }, [photoViewerOpen, activeReview, fullCastOpen, images]);
 
-  const handleListChange = async (listType, action) => {
-    if (!isAuthenticated) return navigate("/");
-    try {
-      const res = await fetch(`${API_URL}/api/user/${listType}`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json", ...authHeaders },
-        body: JSON.stringify({ movieId: Number(id), action }),
-      });
-      if (!res.ok) throw new Error(`Failed to update ${listType}`);
-      if (listType === "watchlist") setInWatchlist(action === "add");
-      if (listType === "favorites") setInFavorites(action === "add");
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const movieId = Number(id);
+  const inWatchlist =
+    isAuthenticated && movieId && watchList.includes(movieId);
+  const inFavorites =
+    isAuthenticated && movieId && favoriteList.includes(movieId);
 
   const openPhotoViewer = (index) => {
     setPhotoViewerIndex(index);
@@ -156,7 +143,9 @@ export default function MediaDetail() {
   const openTrailer = () => {
     if (!details) return;
     const title = details.title || details.name || "";
-    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(title + " trailer")}`;
+    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(
+      title + " trailer"
+    )}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -200,20 +189,23 @@ export default function MediaDetail() {
   const minutes = !isSeries
     ? runtime || 0
     : Array.isArray(episode_run_time) && episode_run_time.length > 0
-      ? episode_run_time[0]
-      : 0;
+    ? episode_run_time[0]
+    : 0;
 
   const duration =
     minutes > 0
       ? `${Math.floor(minutes / 60)}h ${minutes % 60}m`
       : isSeries && number_of_seasons
-        ? `${number_of_seasons} season${number_of_seasons > 1 ? "s" : ""}`
-        : "N/A";
+      ? `${number_of_seasons} season${number_of_seasons > 1 ? "s" : ""}`
+      : "N/A";
 
   const ratingLabel = vote_average ? vote_average.toFixed(1) : "N/A";
 
   const director =
-    credits?.crew?.filter((p) => p.job === "Director").map((p) => p.name).join(", ") || "N/A";
+    credits?.crew
+      ?.filter((p) => p.job === "Director")
+      .map((p) => p.name)
+      .join(", ") || "N/A";
 
   const writers =
     credits?.crew
@@ -263,21 +255,42 @@ export default function MediaDetail() {
               >
                 Watch trailer
               </button>
-              <button
-                onClick={() => handleListChange("watchlist", inWatchlist ? "remove" : "add")}
-                className="px-4 md:px-6 py-2 md:py-2.5 border border-white text-white text-sm md:text-base lg:text-[18px] font-normal rounded-lg hover:bg-white/10 transition-colors"
-              >
-                {inWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
-              </button>
-              <button
-                onClick={() => handleListChange("favorites", inFavorites ? "remove" : "add")}
-                className={`p-2.5 border rounded-lg transition-colors ${
-                  inFavorites ? "border-coquelicot bg-coquelicot/90 text-white" : "border-white text-white hover:bg-white/10"
-                }`}
-                aria-label="Toggle favorite"
-              >
-                <Heart className="w-5 h-5 md:w-6 md:h-6" />
-              </button>
+
+              {isAuthenticated && movieId && (
+                <>
+                  <button
+                    onClick={() =>
+                      inWatchlist
+                        ? removeFromWatchlist(movieId)
+                        : addToWatchlist(movieId)
+                    }
+                    className={`px-4 md:px-6 py-2 md:py-2.5 rounded-lg font-normal transition-colors ${
+                      inWatchlist
+                        ? "bg-white text-black"
+                        : "border border-white/80 text-white hover:bg-white/10"
+                    }`}
+                  >
+                    {inWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      inFavorites
+                        ? removeFromFavorites(movieId)
+                        : addToFavorites(movieId)
+                    }
+                    className={`p-2.5 border rounded-lg transition-colors ${
+                      inFavorites
+                        ? "border-coquelicot bg-coquelicot/90 text-white"
+                        : "border-white text-white hover:bg-white/10"
+                    }`}
+                    aria-label="Toggle favorite"
+                  >
+                    <Heart className="w-5 h-5 md:w-6 md:h-6" />
+                  </button>
+                </>
+              )}
+
               {homepage && (
                 <a
                   href={homepage}
@@ -295,7 +308,9 @@ export default function MediaDetail() {
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[70px] py-8 md:py-12 lg:py-16">
           <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 mb-12 md:mb-16">
             <div className="flex-1 max-w-[420px]">
-              <h2 className="text-white text-2xl md:text-[30px] font-bold mb-3 md:mb-4">Overview</h2>
+              <h2 className="text-white text-2xl md:text-[30px] font-bold mb-3 md:mb-4">
+                Overview
+              </h2>
               <p className="text-white text-base md:text-lg font-semibold text-justify leading-relaxed mb-6 md:mb-8">
                 {overview || "No overview available."}
               </p>
@@ -319,25 +334,36 @@ export default function MediaDetail() {
                   <span className="font-bold">Writers:</span> {writers}
                 </p>
                 <p className="text-white text-base md:text-lg">
-                  <span className="font-bold">Original language:</span> {language}
+                  <span className="font-bold">Original language:</span>{" "}
+                  {language}
                 </p>
                 <p className="text-white text-base md:text-lg">
                   <span className="font-bold">Score:</span> {ratingLabel}
                 </p>
                 {isSeries && number_of_episodes && (
                   <p className="text-white text-base md:text-lg">
-                    <span className="font-bold">Episodes:</span> {number_of_episodes}
+                    <span className="font-bold">Episodes:</span>{" "}
+                    {number_of_episodes}
                   </p>
                 )}
               </div>
             </div>
 
             <div className="flex-1 max-w-[310px]">
-              <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">Cast</h2>
+              <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">
+                Cast
+              </h2>
               <div className="space-y-4">
-                {castList.length === 0 && <p className="text-white/70 text-sm">No cast information available.</p>}
+                {castList.length === 0 && (
+                  <p className="text-white/70 text-sm">
+                    No cast information available.
+                  </p>
+                )}
                 {castList.map((actor) => (
-                  <div key={actor.id} className="flex items-center gap-4 md:gap-5">
+                  <div
+                    key={actor.id}
+                    className="flex items-center gap-4 md:gap-5"
+                  >
                     <div className="w-16 h-16 md:w-[90px] md:h-[90px] rounded-full bg-gray-700 flex-shrink-0 overflow-hidden">
                       <img
                         src={imageUrl(actor.profile_path, "w185")}
@@ -346,8 +372,12 @@ export default function MediaDetail() {
                       />
                     </div>
                     <div>
-                      <h3 className="text-white text-lg md:text-[20px] font-semibold">{actor.name}</h3>
-                      <p className="text-white text-base md:text-lg font-semibold">{actor.character}</p>
+                      <h3 className="text-white text-lg md:text-[20px] font-semibold">
+                        {actor.name}
+                      </h3>
+                      <p className="text-white text-base md:text-lg font-semibold">
+                        {actor.character}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -365,26 +395,44 @@ export default function MediaDetail() {
           </div>
 
           <section className="mb-12 md:mb-16">
-            <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">Reviews</h2>
-            {reviewList.length === 0 && <p className="text-white/70 text-sm">No reviews yet.</p>}
+            <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">
+              Reviews
+            </h2>
+            {reviewList.length === 0 && (
+              <p className="text-white/70 text-sm">No reviews yet.</p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-4">
               {reviewList.map((review) => {
                 const rawRating = review.author_details?.rating ?? 0;
-                const starRating = Math.max(0, Math.min(5, Math.round(rawRating / 2)));
+                const starRating = Math.max(
+                  0,
+                  Math.min(5, Math.round(rawRating / 2))
+                );
                 const content = review.content || "";
                 const short = content.slice(0, 220);
                 const showReadMore = content.length > 220;
 
                 return (
-                  <div key={review.id} className="bg-coquelicot rounded-[20px] p-4 md:p-5 flex flex-col">
+                  <div
+                    key={review.id}
+                    className="bg-coquelicot rounded-[20px] p-4 md:p-5 flex flex-col"
+                  >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         {review.author_details?.avatar_path && (
                           <img
                             src={
-                              review.author_details.avatar_path.startsWith("http")
-                                ? review.author_details.avatar_path.replace(/^\/+/, "")
-                                : imageUrl(review.author_details.avatar_path, "w185")
+                              review.author_details.avatar_path.startsWith(
+                                "http"
+                              )
+                                ? review.author_details.avatar_path.replace(
+                                    /^\/+/,
+                                    ""
+                                  )
+                                : imageUrl(
+                                    review.author_details.avatar_path,
+                                    "w185"
+                                  )
                             }
                             alt={review.author || "Avatar"}
                             className="w-9 h-9 rounded-full object-cover"
@@ -396,7 +444,11 @@ export default function MediaDetail() {
                           </h3>
                           <p className="text-white text-xs">
                             <span className="font-semibold">Posted on:</span>{" "}
-                            {review.created_at ? new Date(review.created_at).toLocaleDateString() : "Unknown"}
+                            {review.created_at
+                              ? new Date(
+                                  review.created_at
+                                ).toLocaleDateString()
+                              : "Unknown"}
                           </p>
                         </div>
                       </div>
@@ -437,8 +489,12 @@ export default function MediaDetail() {
           </section>
 
           <section className="mb-12 md:mb-16">
-            <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">Photos</h2>
-            {photoList.length === 0 && <p className="text-white/70 text-sm">No photos available.</p>}
+            <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">
+              Photos
+            </h2>
+            {photoList.length === 0 && (
+              <p className="text-white/70 text-sm">No photos available.</p>
+            )}
             {photoList.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
                 {photoList.slice(0, 5).map((photo, index) => (
@@ -478,13 +534,21 @@ export default function MediaDetail() {
           </section>
 
           <section>
-            <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">More like this</h2>
-            {recList.length === 0 && <p className="text-white/70 text-sm">No recommendations yet.</p>}
+            <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">
+              More like this
+            </h2>
+            {recList.length === 0 && (
+              <p className="text-white/70 text-sm">No recommendations yet.</p>
+            )}
             <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
               {recList.map((rec) => {
                 const recTitle = rec.title || rec.name;
-                const recYear = (rec.release_date || rec.first_air_date || "").slice(0, 4);
-                const recRating = rec.vote_average ? rec.vote_average.toFixed(1) : "N/A";
+                const recYear = (
+                  rec.release_date || rec.first_air_date || ""
+                ).slice(0, 4);
+                const recRating = rec.vote_average
+                  ? rec.vote_average.toFixed(1)
+                  : "N/A";
 
                 return (
                   <Link
@@ -524,7 +588,10 @@ export default function MediaDetail() {
               })}
             </div>
 
-            <Link to={backLink} className="mt-6 inline-block text-white/70 hover:text-white transition">
+            <Link
+              to={backLink}
+              className="mt-6 inline-block text-white/70 hover:text-white transition"
+            >
               ← Back to {isSeries ? "Series" : "Movies"}
             </Link>
           </section>
@@ -556,7 +623,9 @@ export default function MediaDetail() {
               <button
                 type="button"
                 disabled={photoViewerIndex === 0}
-                onClick={() => setPhotoViewerIndex((i) => Math.max(0, i - 1))}
+                onClick={() =>
+                  setPhotoViewerIndex((i) => Math.max(0, i - 1))
+                }
                 className="px-3 py-1 rounded border border-white/40 disabled:opacity-40"
               >
                 Prev
@@ -567,7 +636,11 @@ export default function MediaDetail() {
               <button
                 type="button"
                 disabled={photoViewerIndex === photoList.length - 1}
-                onClick={() => setPhotoViewerIndex((i) => Math.min(photoList.length - 1, i + 1))}
+                onClick={() =>
+                  setPhotoViewerIndex((i) =>
+                    Math.min(photoList.length - 1, i + 1)
+                  )
+                }
                 className="px-3 py-1 rounded border border-white/40 disabled:opacity-40"
               >
                 Next
@@ -593,7 +666,9 @@ export default function MediaDetail() {
               ×
             </button>
 
-            <h2 className="text-2xl font-bold mb-2">{activeReview.author || "Anonymous"}</h2>
+            <h2 className="text-2xl font-bold mb-2">
+              {activeReview.author || "Anonymous"}
+            </h2>
 
             <p className="text-sm mb-3 opacity-70">
               {activeReview.created_at
@@ -628,7 +703,10 @@ export default function MediaDetail() {
 
             <div className="space-y-3">
               {fullCast.map((actor) => (
-                <div key={actor.cast_id || actor.credit_id || actor.id} className="flex items-center gap-3">
+                <div
+                  key={actor.cast_id || actor.credit_id || actor.id}
+                  className="flex items-center gap-3"
+                >
                   <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
                     <img
                       src={imageUrl(actor.profile_path, "w185")}

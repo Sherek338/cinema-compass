@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from './src/context/authContext.jsx';
+
+import ScrollToTop from "@/components/ScrollToTop";
 
 import Index from '@/pages/index.jsx';
 import Movies from './src/pages/movies.jsx';
@@ -34,35 +35,29 @@ export default function App() {
 
 
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AuthModal open={showAuthModal} onClose={() => setShowAuthModal(false)} />
+    <BrowserRouter>
+      <AuthModal open={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <ScrollToTop />
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/movies" element={<Movies />} />
+        <Route path="/series" element={<Series />} />
 
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/movies" element={<Movies />} />
-          <Route path="/series" element={<Series />} />
+        <Route path="/movies/:id" element={<MediaDetail />} />
+        <Route path="/series/:id" element={<MediaDetail />} />
 
-          <Route path="/movies/:id" element={<MediaDetail />} />
-          <Route path="/series/:id" element={<MediaDetail />} />
+        <Route path="/activate/:link" element={<ActivateAccount />} />
+        <Route path="/search" element={<SearchResults />} />
+        
+        <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
+        <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
 
-          <Route path="/activate/:link" element={<ActivateAccount />} />
-          <Route path="/search" element={<SearchResults />} />
-
-          
-          <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
-          
-
-          
-          <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
-
-          
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
 
-          <Route path="*" element={<Index />} />
+        <Route path="*" element={<Index />} />
+        
         </Routes>
       </BrowserRouter>
-    </AuthProvider>
   );
 }

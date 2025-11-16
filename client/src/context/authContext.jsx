@@ -1,10 +1,9 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 const AuthContext = createContext(null);
+const API_URL = import.meta.env.VITE_API_URL;
 
 export function AuthProvider({ children }) {
-  const API_URL = import.meta.env.VITE_API_URL;
-
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState("");
   const [loading, setLoading] = useState(true);
@@ -12,44 +11,52 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = !!user && !!accessToken;
 
-  useEffect(() => {
-    let cancelled = false;
+  const authHeaders = accessToken
+    ? { Authorization: `Bearer ${accessToken}` }
+    : {};
 
-    const run = async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/auth/refresh`, {
-          method: "GET",
-          credentials: "include",
-        });
+  const watchList = user?.watchList || [];
+  const favoriteList = user?.favoriteList || [];
 
-        if (!res.ok) {
-          if (!cancelled) {
-            setUser(null);
-            setAccessToken("");
-          }
-          return;
-        }
+  const saveAuth = (data) => {
+    if (!data) {
+      setUser(null);
+      setAccessToken("");
+      return;
+    }
+    setUser(data.user);
+    setAccessToken(data.accessToken);
+  };
 
-        const data = await res.json();
-        if (!cancelled) {
-          setUser(data.user);
-          setAccessToken(data.accessToken);
-        }
-      } catch {
-        if (!cancelled) {
-          setUser(null);
-          setAccessToken("");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+  const fetchMe = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/auth/refresh`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        setUser(null);
+        setAccessToken("");
+        return null;
       }
-    };
 
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [API_URL]);
+      const data = await res.json();
+      saveAuth(data);
+      return data;
+    } catch {
+      setUser(null);
+      setAccessToken("");
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    (async () => {
+      await fetchMe();
+      setLoading(false);
+    })();
+  }, []);
 
   const login = async (email, password) => {
     const res = await fetch(`${API_URL}/api/auth/login`, {
@@ -58,13 +65,15 @@ export function AuthProvider({ children }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
+
     if (!res.ok) {
-      const e = await res.json().catch(() => ({}));
-      throw new Error(e.message || "Login failed");
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.message || "Login failed");
     }
+
     const data = await res.json();
-    setUser(data.user);
-    setAccessToken(data.accessToken);
+    saveAuth(data);
+    setModalOpen(false);
     return data;
   };
 
@@ -75,13 +84,15 @@ export function AuthProvider({ children }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, email, password }),
     });
+
     if (!res.ok) {
-      const e = await res.json().catch(() => ({}));
-      throw new Error(e.message || "Registration failed");
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.message || "Registration failed");
     }
+
     const data = await res.json();
-    setUser(data.user);
-    setAccessToken(data.accessToken);
+    saveAuth(data);
+    setModalOpen(false);
     return data;
   };
 
@@ -91,51 +102,95 @@ export function AuthProvider({ children }) {
         method: "POST",
         credentials: "include",
       });
-    } catch {}
-    setUser(null);
-    setAccessToken("");
-  };
-
-  const authHeaders = useMemo(
-    () => (accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-    [accessToken]
-  );
-
-  const fetchMe = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/user/lists`, {
-        method: "GET",
-        credentials: "include",
-        headers: { ...authHeaders },
-      });
-
-      if (res.status === 401) {
-        return { watchList: [], favoriteList: [] };
-      }
-
-      if (!res.ok) {
-        throw new Error("Failed to load lists");
-      }
-
-      return await res.json();
     } catch {
-      return { watchList: [], favoriteList: [] };
+    } finally {
+      setUser(null);
+      setAccessToken("");
     }
   };
 
+
+  const updateWatchlist = async (movieId, action) => {
+    const id = Number(movieId);
+    if (!id) return;
+
+    const res = await fetch(`${API_URL}/api/user/watchlist`, {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify({ movieId: id, action }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.message || "Failed to update watchlist");
+    }
+
+    const data = await res.json();
+    const newList = Array.isArray(data?.watchList) ? data.watchList : watchList;
+
+    setUser((prev) =>
+      prev ? { ...prev, watchList: newList } : prev
+    );
+  };
+
+  const updateFavorites = async (movieId, action) => {
+    const id = Number(movieId);
+    if (!id) return;
+
+    const res = await fetch(`${API_URL}/api/user/favorites`, {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify({ movieId: id, action }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.message || "Failed to update favorites");
+    }
+
+    const data = await res.json();
+    const newList = Array.isArray(data?.favoriteList)
+      ? data.favoriteList
+      : favoriteList;
+
+    setUser((prev) =>
+      prev ? { ...prev, favoriteList: newList } : prev
+    );
+  };
+
+  const addToWatchlist = (movieId) => updateWatchlist(movieId, "add");
+  const removeFromWatchlist = (movieId) => updateWatchlist(movieId, "remove");
+  const addToFavorites = (movieId) => updateFavorites(movieId, "add");
+  const removeFromFavorites = (movieId) => updateFavorites(movieId, "remove");
+
   const value = {
     user,
-    setUser,
-    isAuthenticated,
     accessToken,
-    authHeaders,
+    isAuthenticated,
     loading,
     modalOpen,
     setModalOpen,
+    authHeaders,
+    fetchMe,
     login,
     register,
     logout,
-    fetchMe,
+    watchList,
+    favoriteList,
+    addToWatchlist,
+    removeFromWatchlist,
+    addToFavorites,
+    removeFromFavorites,
+    updateWatchlist,
+    updateFavorites,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

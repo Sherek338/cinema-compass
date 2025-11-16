@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Search, X, Menu } from "lucide-react";
 import { useAuth } from "@/context/authContext.jsx";
@@ -10,10 +10,6 @@ export default function Header() {
   const [q, setQ] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    fetchMe().catch(() => {});
-  }, []);
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -86,7 +82,6 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile sheet */}
       {mobileOpen && (
         <div className="fixed inset-0 z-[60] bg-black/90">
           <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-[70px] h-full flex flex-col">
