@@ -1,5 +1,4 @@
 import authService from '../services/authService.js';
-import path from 'path';
 
 const refreshTokenMaxAge = 2592000000;
 const cookieOptions = {
@@ -48,11 +47,11 @@ const logout = async (req, res, next) => {
 const activate = async (req, res, next) => {
   try {
     const { link } = req.params;
-    const isActivated = await authService.activate(link);
+    await authService.activate(link);
 
-    res.redirect(
-      path.join(process.env.CLIENT_URL, `activate?activated=${isActivated}`)
-    );
+    res.status(200).json({
+      message: 'Account activated successfully',
+    });
   } catch (e) {
     next(e);
   }
