@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import Header from "@/components/header.jsx";
-import Footer from "@/components/footer.jsx";
-import MediaCard from "@/components/mediacard.jsx";
+import Header from "@/components/Header.jsx";
+import Footer from "@/components/Footer.jsx";
+import MediaCard from "@/components/MediaCard.jsx";
 
 export default function SearchResults() {
   const [params] = useSearchParams();

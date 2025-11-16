@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from "react";
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from './src/context/authContext';
+import { AuthProvider } from './src/context/authContext.jsx';
 
 import Index from '@/pages/index.jsx';
-import Movies from './src/pages/movies';
+import Movies from './src/pages/movies.jsx';
 import Series from "@/pages/series.jsx";
 import Profile from '@/pages/profile.jsx';
-import MediaDetail from "@/pages/MediaDetail.jsx";
+import MediaDetail from "@/pages/mediadetail.jsx";
 import Watchlist from "@/pages/watchlist.jsx";
 import Favorites from "@/pages/favorites.jsx";
-import SearchResults from "@/pages/SearchResults";
+import SearchResults from "@/pages/searchresults.jsx";
 import ActivateAccount from "@/pages/activate.jsx";
 
 import AuthModal from "@/components/AuthModal.jsx";

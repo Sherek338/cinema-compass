@@ -14,14 +14,22 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let cancelled = false;
+
     const run = async () => {
       try {
-        setLoading(true);
         const res = await fetch(`${API_URL}/api/auth/refresh`, {
           method: "GET",
           credentials: "include",
         });
-        if (!res.ok) throw new Error("Refresh failed");
+
+        if (!res.ok) {
+          if (!cancelled) {
+            setUser(null);
+            setAccessToken("");
+          }
+          return;
+        }
+
         const data = await res.json();
         if (!cancelled) {
           setUser(data.user);
@@ -36,6 +44,7 @@ export function AuthProvider({ children }) {
         if (!cancelled) setLoading(false);
       }
     };
+
     run();
     return () => {
       cancelled = true;
@@ -87,18 +96,31 @@ export function AuthProvider({ children }) {
     setAccessToken("");
   };
 
-  const authHeaders = useMemo(() => {
-    return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
-  }, [accessToken]);
+  const authHeaders = useMemo(
+    () => (accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    [accessToken]
+  );
 
   const fetchMe = async () => {
-    const res = await fetch(`${API_URL}/api/user/me`, {
-      method: "GET",
-      credentials: "include",
-      headers: { ...authHeaders },
-    });
-    if (!res.ok) throw new Error("Failed to load user");
-    return await res.json();
+    try {
+      const res = await fetch(`${API_URL}/api/user/lists`, {
+        method: "GET",
+        credentials: "include",
+        headers: { ...authHeaders },
+      });
+
+      if (res.status === 401) {
+        return { watchList: [], favoriteList: [] };
+      }
+
+      if (!res.ok) {
+        throw new Error("Failed to load lists");
+      }
+
+      return await res.json();
+    } catch {
+      return { watchList: [], favoriteList: [] };
+    }
   };
 
   const value = {

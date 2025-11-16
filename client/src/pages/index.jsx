@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero.jsx";
-import MediaCard from "@/components/MediaCard";
+import MediaCard from "@/components/MediaCard.jsx";
 
 export default function Home() {
   const [movies, setMovies] = useState([]);
@@ -88,7 +88,7 @@ export default function Home() {
                   year={movie.year}
                   rating={movie.rating}
                   poster={movie.poster}
-                  type="movie"
+                  isSeries={false}
                 />
               ))}
             </div>
@@ -112,8 +112,9 @@ export default function Home() {
                   year={show.year}
                   rating={show.rating}
                   poster={show.poster}
-                  type="series"
+                  isSeries={true}
                 />
+
               ))}
             </div>
           )}

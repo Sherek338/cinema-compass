@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import Header  from "@/components/header.jsx";
-import  Footer from "@/components/footer.jsx";
+import Header  from "@/components/Header.jsx";
+import  Footer from "@/components/Footer.jsx";
 
 export default function ActivateAccount() {
   const { link } = useParams();

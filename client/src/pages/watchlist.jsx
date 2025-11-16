@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import Header from "@/components/header.jsx";
-import Footer from "@/components/footer.jsx";
+import Header from "@/components/Header.jsx";
+import Footer from "@/components/Footer.jsx";
 import { useAuth } from "@/context/authContext.jsx";
-import MediaCard from "@/components/mediacard.jsx";
+import MediaCard from "@/components/MediaCard.jsx";
 
 export default function Watchlist() {
   const { isAuthenticated, authHeaders, fetchMe } = useAuth();

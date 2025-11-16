@@ -55,7 +55,7 @@ export default function Hero({ items }) {
   const year = (cur?.release_date || cur?.first_air_date || "").slice(0, 4);
   const rating =
     typeof cur?.vote_average === "number" ? cur.vote_average.toFixed(1) : null;
-  const to = mediaType === "tv" ? `/series/${cur?.id}` : `/movie/${cur?.id}`;
+  const to = mediaType === "tv" ? `/series/${cur?.id}` : `/movies/${cur?.id}`;
 
   const len = Math.max(slides.length || 1, 1);
   const next = () => setI((p) => (p + 1) % len);
