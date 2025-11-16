@@ -90,6 +90,8 @@ const activate = async (activationLink) => {
 
   user.isActivated = true;
   await user.save();
+
+  return user.isActivated;
 };
 
 const refresh = async (refreshToken) => {
