@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Header from '@/components/header.jsx';
 import Footer from '@/components/footer.jsx';
-import { useAuth } from '@/context/AuthContext.jsx';
+import { useAuth } from '@/context/authContext.jsx';
 import MediaCard from '@/components/mediacard.jsx';
 
 export default function Favorites() {
