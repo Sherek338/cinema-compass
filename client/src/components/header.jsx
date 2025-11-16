@@ -35,19 +35,19 @@ export default function Header() {
             <nav className="hidden md:flex items-center gap-[22px] lg:gap-[28px]">
               <Link
                 to="/"
-                className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot"
+                className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot transition-colors"
               >
                 Home
               </Link>
               <Link
                 to="/movies"
-                className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot"
+                className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot transition-colors"
               >
                 Movies
               </Link>
               <Link
                 to="/series"
-                className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot"
+                className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot transition-colors"
               >
                 Series
               </Link>
@@ -55,13 +55,13 @@ export default function Header() {
                 <>
                   <Link
                     to="/watchlist"
-                    className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot"
+                    className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot transition-colors"
                   >
                     Watchlist
                   </Link>
                   <Link
                     to="/favorites"
-                    className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot"
+                    className="nav-link text-white text-[18px] lg:text-[20px] hover:text-coquelicot transition-colors"
                   >
                     Favorites
                   </Link>
@@ -101,7 +101,7 @@ export default function Header() {
               <button
                 type="button"
                 onClick={() => setModalOpen(true)}
-                className="bg-coquelicot text-white px-4 py-2 rounded-full hover:bg-coquelicot/90 transition"
+                className="bg-coquelicot text-white px-4 py-2 rounded-full hover:bg-coquelicot/90 transition cursor-pointer"
               >
                 Login
               </button>

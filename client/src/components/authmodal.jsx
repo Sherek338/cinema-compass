@@ -60,13 +60,13 @@ export default function AuthModal() {
 
         <div className="flex gap-2 mb-4">
           <button
-            className={`flex-1 py-2 rounded-lg ${mode === 'login' ? 'bg-coquelicot text-white' : 'bg-transparent border border-white/20 text-white'}`}
+            className={`flex-1 py-2 rounded-lg cursor-pointer ${mode === 'login' ? 'bg-coquelicot text-white' : 'bg-transparent border border-white/20 text-white'}`}
             onClick={() => setMode('login')}
           >
             Login
           </button>
           <button
-            className={`flex-1 py-2 rounded-lg ${mode === 'register' ? 'bg-coquelicot text-white' : 'bg-transparent border border-white/20 text-white'}`}
+            className={`flex-1 py-2 rounded-lg cursor-pointer ${mode === 'register' ? 'bg-coquelicot text-white' : 'bg-transparent border border-white/20 text-white'}`}
             onClick={() => setMode('register')}
           >
             Register
@@ -105,7 +105,7 @@ export default function AuthModal() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-11 rounded-lg bg-coquelicot text-white font-semibold hover:bg-coquelicot/90 transition disabled:opacity-60"
+            className="w-full h-11 rounded-lg bg-coquelicot text-white font-semibold hover:bg-coquelicot/90 transition disabled:opacity-60 cursor-pointer"
           >
             {loading
               ? 'Please wait...'

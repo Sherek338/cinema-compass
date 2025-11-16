@@ -1,21 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
 const img = (p) =>
   p
     ? `https://image.tmdb.org/t/p/original${p}`
-    : "https://via.placeholder.com/1600x900?text=No+Image";
+    : 'https://via.placeholder.com/1600x900?text=No+Image';
 
 async function tmdb(path, params = {}) {
   const q = new URLSearchParams({
     api_key: API_KEY,
-    language: "en-US",
+    language: 'en-US',
     ...params,
   });
-  const res = await fetch(`https://api.themoviedb.org/3${path}?${q.toString()}`);
-  if (!res.ok) throw new Error("TMDB error");
+  const res = await fetch(
+    `https://api.themoviedb.org/3${path}?${q.toString()}`
+  );
+  if (!res.ok) throw new Error('TMDB error');
   return res.json();
 }
 
@@ -27,7 +29,10 @@ export default function Hero({ items }) {
     if (items && items.length) return;
     (async () => {
       try {
-        const data = await tmdb("/movie/now_playing", { page: 1, region: "US" });
+        const data = await tmdb('/movie/now_playing', {
+          page: 1,
+          region: 'US',
+        });
         setSlides((data?.results ?? []).slice(0, 5));
       } catch (e) {
         console.error(e);
@@ -38,24 +43,22 @@ export default function Hero({ items }) {
   const cur = slides[i] ?? null;
 
   const genresText = useMemo(() => {
-    return (cur?.genre_names ?? [])
-      .slice(0, 3)
-      .map((g, idx) => (
-        <span
-          key={`${g}-${idx}`}
-          className="px-3 py-1 rounded-full bg-white/10 text-white text-sm border border-white/20"
-        >
-          {g}
-        </span>
-      ));
+    return (cur?.genre_names ?? []).slice(0, 3).map((g, idx) => (
+      <span
+        key={`${g}-${idx}`}
+        className="px-3 py-1 rounded-full bg-white/10 text-white text-sm border border-white/20"
+      >
+        {g}
+      </span>
+    ));
   }, [cur]);
 
-  const mediaType = cur?.media_type || "movie";
-  const title = cur?.title || cur?.name || "";
-  const year = (cur?.release_date || cur?.first_air_date || "").slice(0, 4);
+  const mediaType = cur?.media_type || 'movie';
+  const title = cur?.title || cur?.name || '';
+  const year = (cur?.release_date || cur?.first_air_date || '').slice(0, 4);
   const rating =
-    typeof cur?.vote_average === "number" ? cur.vote_average.toFixed(1) : null;
-  const to = mediaType === "tv" ? `/series/${cur?.id}` : `/movie/${cur?.id}`;
+    typeof cur?.vote_average === 'number' ? cur.vote_average.toFixed(1) : null;
+  const to = mediaType === 'tv' ? `/series/${cur?.id}` : `/movie/${cur?.id}`;
 
   const len = Math.max(slides.length || 1, 1);
   const next = () => setI((p) => (p + 1) % len);
@@ -70,7 +73,7 @@ export default function Hero({ items }) {
           src={img(cur.backdrop_path || cur.poster_path)}
           alt={title}
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ objectPosition: "center 20%" }}
+          style={{ objectPosition: 'center 20%' }}
           loading="eager"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/60" />
@@ -128,7 +131,7 @@ export default function Hero({ items }) {
                 >
                   View more
                 </Link>
-                <button className="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition">
+                <button className="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition cursor-pointer">
                   Add to Watchlist
                 </button>
               </div>
@@ -138,9 +141,15 @@ export default function Hero({ items }) {
           <button
             onClick={prev}
             aria-label="Previous"
-            className="absolute left-0 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm"
+            className="absolute left-0 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm cursor-pointer z-20"
           >
-            <svg width="28" height="28" viewBox="0 0 37 37" fill="none" aria-hidden="true">
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 37 37"
+              fill="none"
+              aria-hidden="true"
+            >
               <path
                 d="M23.125 10.0209L13.875 19.2709L23.125 28.5209"
                 stroke="#ffffff"
@@ -153,9 +162,15 @@ export default function Hero({ items }) {
           <button
             onClick={next}
             aria-label="Next"
-            className="absolute right-0 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm"
+            className="absolute right-0 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm cursor-pointer"
           >
-            <svg width="28" height="28" viewBox="0 0 37 37" fill="none" aria-hidden="true">
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 37 37"
+              fill="none"
+              aria-hidden="true"
+            >
               <path
                 d="M13.875 10.0209L23.125 19.2709L13.875 28.5209"
                 stroke="#ffffff"
@@ -174,7 +189,7 @@ export default function Hero({ items }) {
                   onClick={() => setI(di)}
                   aria-label={`Go to slide ${di + 1}`}
                   className={`h-[6px] w-[6px] rounded-full ${
-                    di === i ? "bg-white" : "bg-white/40"
+                    di === i ? 'bg-white' : 'bg-white/40'
                   }`}
                 />
               ))}
