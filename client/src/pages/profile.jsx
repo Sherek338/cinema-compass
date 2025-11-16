@@ -1,80 +1,99 @@
-import { useEffect, useMemo, useState } from "react";
-import Header from "@/components/header.jsx";
-import Footer from "@/components/footer.jsx";
-import { useAuth } from "@/context/authContext.jsx";
-import MediaCard from "@/components/mediacard.jsx";
+import { useEffect, useState } from 'react';
+import Header from '@/components/header.jsx';
+import Footer from '@/components/footer.jsx';
+import { useAuth } from '@/context/authContext.jsx';
+import MediaCard from '@/components/mediacard.jsx';
 
 export default function Profile() {
-  const { isAuthenticated, fetchMe, authHeaders } = useAuth();
-
-  const [me, setMe] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { isAuthenticated, user, updateFavorites, updateWatchlist } = useAuth();
 
   const [favItems, setFavItems] = useState([]);
   const [watchItems, setWatchItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const TMDB_KEY = import.meta.env.VITE_TMDB_API_KEY;
-  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     let cancelled = false;
-    const run = async () => {
+
+    const loadData = async () => {
+      if (!isAuthenticated || !user) {
+        setFavItems([]);
+        setWatchItems([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        if (!isAuthenticated) {
-          setMe(null);
-          setFavItems([]);
-          setWatchItems([]);
-          return;
-        }
-        const user = await fetchMe();
-        if (!cancelled) setMe(user);
 
         const favIds = user.favoriteList || [];
         const watchIds = user.watchList || [];
 
-        const load = async (ids) =>
-          Promise.all(
+        const loadMovies = async (ids) => {
+          if (ids.length === 0) return [];
+
+          return Promise.all(
             ids.map(async (id) => {
-              const r = await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_KEY}&language=en-US`);
+              const r = await fetch(
+                `https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_KEY}&language=en-US`
+              );
               const j = await r.json();
               return {
                 id: j.id,
                 title: j.title,
-                poster: j.poster_path ? `https://image.tmdb.org/t/p/w500${j.poster_path}` : "https://via.placeholder.com/400x600?text=No+Image",
-                rating: j.vote_average?.toFixed(1) ?? "N/A",
-                year: (j.release_date || "").slice(0, 4) || "—",
-                duration: j.runtime ? `${j.runtime} min` : "—",
+                poster: j.poster_path
+                  ? `https://image.tmdb.org/t/p/w500${j.poster_path}`
+                  : 'https://via.placeholder.com/400x600?text=No+Image',
+                rating: j.vote_average?.toFixed(1) ?? 'N/A',
+                year: (j.release_date || '').slice(0, 4) || '—',
+                duration: j.runtime ? `${j.runtime} min` : '—',
               };
             })
           );
+        };
 
-        const [fav, watch] = await Promise.all([load(favIds), load(watchIds)]);
+        const [fav, watch] = await Promise.all([
+          loadMovies(favIds),
+          loadMovies(watchIds),
+        ]);
+
         if (!cancelled) {
           setFavItems(fav);
           setWatchItems(watch);
         }
-      } catch {
-        
+      } catch (err) {
+        console.error('Failed to load profile data:', err);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
-    run();
+
+    loadData();
+
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, fetchMe, TMDB_KEY]);
+  }, [isAuthenticated, user, TMDB_KEY]);
 
-  const removeFrom = async (type, movieId) => {
-    await fetch(`${API_URL}/api/user/${type}`, {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json", ...authHeaders },
-      body: JSON.stringify({ movieId, action: "remove" }),
-    });
-    if (type === "favorites") setFavItems((p) => p.filter((x) => x.id !== movieId));
-    if (type === "watchlist") setWatchItems((p) => p.filter((x) => x.id !== movieId));
+  const removeFromFavorites = async (movieId) => {
+    try {
+      await updateFavorites(movieId, 'remove');
+      setFavItems((p) => p.filter((x) => x.id !== movieId));
+    } catch (err) {
+      console.error('Failed to remove favorite:', err);
+    }
+  };
+
+  const removeFromWatchlist = async (movieId) => {
+    try {
+      await updateWatchlist(movieId, 'remove');
+      setWatchItems((p) => p.filter((x) => x.id !== movieId));
+    } catch (err) {
+      console.error('Failed to remove from watchlist:', err);
+    }
   };
 
   if (loading) {
@@ -85,11 +104,14 @@ export default function Profile() {
     );
   }
 
-  if (!me) {
+  if (!user) {
     return (
       <div className="min-h-screen flex flex-col bg-[#201E1F] text-white justify-center items-center gap-4">
         <p className="text-lg">Please log in again.</p>
-        <a href="/" className="px-6 py-2 rounded bg-[#FF4002] font-semibold hover:bg-[#ff5722] transition">
+        <a
+          href="/"
+          className="px-6 py-2 rounded bg-[#FF4002] font-semibold hover:bg-[#ff5722] transition"
+        >
           Go Home
         </a>
       </div>
@@ -105,13 +127,29 @@ export default function Profile() {
         <div className="flex flex-col lg:flex-row gap-10">
           <aside className="w-full lg:w-[300px] bg-[#2B2A2B] p-6 rounded-xl flex flex-col gap-6 shadow-lg">
             <div>
-              <h2 className="text-white font-semibold text-2xl mb-1">{me.username}</h2>
-              <p className="text-[#999]">{me.email}</p>
+              <h2 className="text-white font-semibold text-2xl mb-1">
+                {user.username}
+              </h2>
+              <p className="text-[#999]">{user.email}</p>
             </div>
             <div>
               <p className="text-white font-medium">Status:</p>
-              <p className={`font-semibold ${me.isActivated ? "text-green-400" : "text-yellow-400"}`}>
-                {me.isActivated ? "Activated" : "Not Activated"}
+              <p
+                className={`font-semibold ${user.isActivated ? 'text-green-400' : 'text-yellow-400'}`}
+              >
+                {user.isActivated ? 'Activated' : 'Not Activated'}
+              </p>
+            </div>
+            <div>
+              <p className="text-white font-medium">Favorites:</p>
+              <p className="text-[#999]">
+                {user.favoriteList?.length || 0} movies
+              </p>
+            </div>
+            <div>
+              <p className="text-white font-medium">Watchlist:</p>
+              <p className="text-[#999]">
+                {user.watchList?.length || 0} movies
               </p>
             </div>
           </aside>
@@ -123,8 +161,19 @@ export default function Profile() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
                   {favItems.map((m) => (
                     <div key={m.id} className="relative">
-                      <MediaCard id={m.id} title={m.title} poster={m.poster} rating={m.rating} year={m.year} duration={m.duration} isSeries={false} />
-                      <button onClick={() => removeFrom("favorites", m.id)} className="absolute top-2 right-2 text-xs px-2 py-1 bg-black/60 rounded hover:bg-black/80">
+                      <MediaCard
+                        id={m.id}
+                        title={m.title}
+                        poster={m.poster}
+                        rating={m.rating}
+                        year={m.year}
+                        duration={m.duration}
+                        isSeries={false}
+                      />
+                      <button
+                        onClick={() => removeFromFavorites(m.id)}
+                        className="absolute top-2 right-2 text-xs px-2 py-1 bg-black/60 rounded hover:bg-black/80"
+                      >
                         Remove
                       </button>
                     </div>
@@ -141,8 +190,19 @@ export default function Profile() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
                   {watchItems.map((m) => (
                     <div key={m.id} className="relative">
-                      <MediaCard id={m.id} title={m.title} poster={m.poster} rating={m.rating} year={m.year} duration={m.duration} isSeries={false} />
-                      <button onClick={() => removeFrom("watchlist", m.id)} className="absolute top-2 right-2 text-xs px-2 py-1 bg-black/60 rounded hover:bg-black/80">
+                      <MediaCard
+                        id={m.id}
+                        title={m.title}
+                        poster={m.poster}
+                        rating={m.rating}
+                        year={m.year}
+                        duration={m.duration}
+                        isSeries={false}
+                      />
+                      <button
+                        onClick={() => removeFromWatchlist(m.id)}
+                        className="absolute top-2 right-2 text-xs px-2 py-1 bg-black/60 rounded hover:bg-black/80"
+                      >
                         Remove
                       </button>
                     </div>

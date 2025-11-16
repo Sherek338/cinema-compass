@@ -20,7 +20,7 @@ const corsOptions = {
   origin: process.env.CLIENT_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   preflightContinue: false,
   optionsSuccessStatus: 204,
 };
@@ -30,6 +30,7 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 app.use('/api/auth', authRouter);
 app.use('/api/movielist', movieListRouter);

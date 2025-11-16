@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+// client/src/context/AuthContext.jsx
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from 'react';
 
 const AuthContext = createContext(null);
 
@@ -6,121 +14,208 @@ export function AuthProvider({ children }) {
   const API_URL = import.meta.env.VITE_API_URL;
 
   const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState("");
+  const [accessToken, setAccessToken] = useState('');
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
 
   const isAuthenticated = !!user && !!accessToken;
 
+  const apiRequest = useCallback(
+    async (endpoint, options = {}) => {
+      try {
+        const response = await fetch(`${API_URL}${endpoint}`, {
+          ...options,
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+          },
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(
+            error.message || `Request failed with status ${response.status}`
+          );
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error(`API Error [${endpoint}]:`, error);
+        throw error;
+      }
+    },
+    [API_URL]
+  );
+
   useEffect(() => {
     let cancelled = false;
-    const run = async () => {
+
+    const refreshAuth = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_URL}/api/auth/refresh`, {
-          method: "GET",
-          credentials: "include",
+        const data = await apiRequest('/api/auth/refresh', {
+          method: 'GET',
         });
-        if (!res.ok) throw new Error("Refresh failed");
-        const data = await res.json();
-        if (!cancelled) {
+
+        if (!cancelled && data.user && data.accessToken) {
           setUser(data.user);
           setAccessToken(data.accessToken);
         }
-      } catch {
+      } catch (error) {
         if (!cancelled) {
           setUser(null);
-          setAccessToken("");
+          setAccessToken('');
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
-    run();
+
+    refreshAuth();
+
     return () => {
       cancelled = true;
     };
-  }, [API_URL]);
+  }, [apiRequest]);
 
-  const login = async (email, password) => {
-    const res = await fetch(`${API_URL}/api/auth/login`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    if (!res.ok) {
-      const e = await res.json().catch(() => ({}));
-      throw new Error(e.message || "Login failed");
-    }
-    const data = await res.json();
-    setUser(data.user);
-    setAccessToken(data.accessToken);
-    return data;
-  };
+  const login = useCallback(
+    async (email, password) => {
+      try {
+        const data = await apiRequest('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password }),
+        });
 
-  const register = async (username, email, password) => {
-    const res = await fetch(`${API_URL}/api/auth/registration`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, email, password }),
-    });
-    if (!res.ok) {
-      const e = await res.json().catch(() => ({}));
-      throw new Error(e.message || "Registration failed");
-    }
-    const data = await res.json();
-    setUser(data.user);
-    setAccessToken(data.accessToken);
-    return data;
-  };
+        setUser(data.user);
+        setAccessToken(data.accessToken);
+        return data;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [apiRequest]
+  );
 
-  const logout = async () => {
+  const register = useCallback(
+    async (username, email, password) => {
+      try {
+        const data = await apiRequest('/api/auth/registration', {
+          method: 'POST',
+          body: JSON.stringify({ username, email, password }),
+        });
+
+        setUser(data.user);
+        setAccessToken(data.accessToken);
+        return data;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [apiRequest]
+  );
+
+  const logout = useCallback(async () => {
     try {
-      await fetch(`${API_URL}/api/auth/logout`, {
-        method: "POST",
-        credentials: "include",
+      await apiRequest('/api/auth/logout', {
+        method: 'POST',
       });
-    } catch {}
-    setUser(null);
-    setAccessToken("");
-  };
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      setAccessToken('');
+    }
+  }, [apiRequest]);
 
   const authHeaders = useMemo(() => {
     return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
   }, [accessToken]);
 
-  const fetchMe = async () => {
-    const res = await fetch(`${API_URL}/api/user/me`, {
-      method: "GET",
-      credentials: "include",
-      headers: { ...authHeaders },
-    });
-    if (!res.ok) throw new Error("Failed to load user");
-    return await res.json();
-  };
+  const updateFavorites = useCallback(
+    async (movieId, action) => {
+      try {
+        const data = await apiRequest('/api/movielist/favorites', {
+          method: 'PUT',
+          headers: authHeaders,
+          body: JSON.stringify({ movieId, action }),
+        });
 
-  const value = {
-    user,
-    setUser,
-    isAuthenticated,
-    accessToken,
-    authHeaders,
-    loading,
-    modalOpen,
-    setModalOpen,
-    login,
-    register,
-    logout,
-    fetchMe,
-  };
+        if (data.user) {
+          setUser(data.user);
+        }
+
+        return data;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [apiRequest, authHeaders]
+  );
+
+  const updateWatchlist = useCallback(
+    async (movieId, action) => {
+      try {
+        const data = await apiRequest('/api/movielist/watchlist', {
+          method: 'PUT',
+          headers: authHeaders,
+          body: JSON.stringify({ movieId, action }),
+        });
+
+        if (data.user) {
+          setUser(data.user);
+        }
+
+        return data;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [apiRequest, authHeaders]
+  );
+
+  const value = useMemo(
+    () => ({
+      user,
+      setUser,
+      isAuthenticated,
+      accessToken,
+      authHeaders,
+      loading,
+      modalOpen,
+      setModalOpen,
+      login,
+      register,
+      logout,
+      updateFavorites,
+      updateWatchlist,
+      apiRequest,
+    }),
+    [
+      user,
+      isAuthenticated,
+      accessToken,
+      authHeaders,
+      loading,
+      modalOpen,
+      login,
+      register,
+      logout,
+      updateFavorites,
+      updateWatchlist,
+      apiRequest,
+    ]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
 }
