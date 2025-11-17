@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
-import Header from '@/components/Header.jsx';
-import Footer from '@/components/Footer.jsx';
+import Header from '@/components/header.jsx';
+import Footer from '@/components/footer.jsx';
 import { Heart } from 'lucide-react';
 import { useAuth } from '@/context/authContext.jsx';
 
