@@ -1,4 +1,4 @@
-import movieListService from '../services/movieListService.js';
+import movieListService from '../services/userService.js';
 
 const getFavorites = async (req, res, next) => {
   try {
@@ -11,12 +11,15 @@ const getFavorites = async (req, res, next) => {
   }
 };
 
-const addFavorite = async (req, res, next) => {
+const updateFavorite = async (req, res, next) => {
   try {
-    const movieId = req.params.mvId;
     const userId = req.user.id;
+    const newId = {
+      id: req.body.id,
+      type: req.body.type,
+    };
 
-    const favorites = await movieListService.addFavorite(userId, movieId);
+    const favorites = await movieListService.updateFavorite(userId, newId);
 
     res.status(201).json({ message: 'Movie added to favorites', favorites });
   } catch (e) {
@@ -26,10 +29,13 @@ const addFavorite = async (req, res, next) => {
 
 const deleteFavorite = async (req, res, next) => {
   try {
-    const movieId = req.params.mvId;
     const userId = req.user.id;
+    const newId = {
+      id: req.body.id,
+      type: req.body.type,
+    };
 
-    const favorites = await movieListService.deleteFavorite(userId, movieId);
+    const favorites = await movieListService.deleteFavorite(userId, newId);
 
     res
       .status(200)
@@ -50,12 +56,15 @@ const getWatchlist = async (req, res, next) => {
   }
 };
 
-const addWatchlist = async (req, res, next) => {
+const updateWatchlist = async (req, res, next) => {
   try {
-    const movieId = req.params.mvId;
     const userId = req.user.id;
+    const newId = {
+      id: req.body.id,
+      type: req.body.type,
+    };
 
-    const watchList = await movieListService.addWatchlist(userId, movieId);
+    const watchList = await movieListService.updateWatchlist(userId, newId);
 
     res.status(201).json({ message: 'Movie added to watchlist', watchList });
   } catch (e) {
@@ -65,10 +74,13 @@ const addWatchlist = async (req, res, next) => {
 
 const deleteWatchlist = async (req, res, next) => {
   try {
-    const movieId = req.params.mvId;
     const userId = req.user.id;
+    const newId = {
+      id: req.body.id,
+      type: req.body.type,
+    };
 
-    const watchList = await movieListService.deleteWatchlist(userId, movieId);
+    const watchList = await movieListService.deleteWatchlist(userId, newId);
 
     res
       .status(200)
@@ -80,9 +92,9 @@ const deleteWatchlist = async (req, res, next) => {
 
 export default {
   getFavorites,
-  addFavorite,
+  updateFavorite,
   deleteFavorite,
   getWatchlist,
-  addWatchlist,
+  updateWatchlist,
   deleteWatchlist,
 };
