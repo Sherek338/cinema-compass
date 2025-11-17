@@ -197,9 +197,9 @@ export function AuthProvider({ children }) {
 
       if (data.user) {
         setUser(data.user);
-      } else if (Array.isArray(data.favoriteList)) {
+      } else if (Array.isArray(data.favorites)) {
         setUser((prev) =>
-          prev ? { ...prev, favoriteList: data.favoriteList } : prev
+          prev ? { ...prev, favoriteList: data.favorites } : prev
         );
       }
 

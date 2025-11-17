@@ -41,7 +41,7 @@ export default function SearchResults() {
               name: r.name,
               poster: r.poster_path
                 ? `https://image.tmdb.org/t/p/w500${r.poster_path}`
-                : 'https://via.placeholder.com/400x600?text=No+Image',
+                : '/placeholder.png',
               rating: r.vote_average ? r.vote_average.toFixed(1) : 'N/A',
               year:
                 (r.release_date || r.first_air_date || '').slice(0, 4) || '—',

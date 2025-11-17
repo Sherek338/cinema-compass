@@ -6,9 +6,7 @@ import MediaCard from '@/components/mediacard.jsx';
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
 const IMG = (p) =>
-  p
-    ? `https://image.tmdb.org/t/p/w500${p}`
-    : 'https://via.placeholder.com/400x600?text=No+Image';
+  p ? `https://image.tmdb.org/t/p/w500${p}` : '/placeholder.png';
 
 async function tmdb(path, params = {}) {
   const q = new URLSearchParams({

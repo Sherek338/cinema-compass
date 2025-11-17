@@ -15,11 +15,9 @@ function formatRuntime(runtime) {
   return `${h}h ${m}m`;
 }
 
-async function fetchOneTMDB(id, apiKey, signal) {
-  let res = await fetch(
-    `${TMDB_BASE}/movie/${id}?api_key=${apiKey}&language=en-US`,
-    { signal }
-  );
+async function fetchOneTMDB(id, type, apiKey, signal) {
+  const url = `${TMDB_BASE}/${type === 'movie' ? 'movie' : 'tv'}/${id}?api_key=${apiKey}&language=en-US`;
+  let res = await fetch(url, { signal });
 
   let mediaType = 'movie';
 
@@ -34,7 +32,7 @@ async function fetchOneTMDB(id, apiKey, signal) {
 
   const data = await res.json();
 
-  const isSeries = mediaType === 'tv';
+  const isSeries = type === 'series';
   const seasons =
     isSeries && typeof data.number_of_seasons === 'number'
       ? `${data.number_of_seasons} season${
@@ -53,35 +51,26 @@ async function fetchOneTMDB(id, apiKey, signal) {
     year: (data.release_date || data.first_air_date || '').slice(0, 4),
     rating:
       typeof data.vote_average === 'number'
-        ? data.vote_average.toFixed(1)
+        ? data.vote_average.toFixed(1) === '0.0'
+          ? 'N/A'
+          : data.vote_average.toFixed(1)
         : null,
-    image: data.poster_path
+    poster: data.poster_path
       ? `https://image.tmdb.org/t/p/w342${data.poster_path}`
-      : 'https://via.placeholder.com/342x513?text=No+Image',
-    duration,
-    seasons,
+      : '/placeholder.png',
     isSeries,
+    meta: seasons || duration || null,
   };
 }
 
-function ProfileMovieCard({
-  id,
-  title,
-  year,
-  duration,
-  seasons,
-  rating,
-  image,
-  isSeries,
-}) {
-  const meta = seasons || duration || null;
+function ProfileMovieCard({ id, title, year, rating, poster, isSeries, meta }) {
   const detailPath = isSeries ? `/series/${id}` : `/movies/${id}`;
 
   return (
     <div className="flex-shrink-0 w-[160px] sm:w-[180px] md:w-[200px] lg:w-[215px] flex flex-col gap-3">
       <Link to={detailPath}>
         <img
-          src={image}
+          src={poster}
           alt={title}
           className="w-full h-[240px] sm:h-[260px] md:h-[273px] object-cover rounded-[16px]"
         />
@@ -97,16 +86,16 @@ function ProfileMovieCard({
           {meta && (
             <>
               <span>•</span>
-              <span>{meta}</span>
+              <span>{meta.length > 6 ? meta.slice(0, 6) + '...' : meta}</span>
             </>
           )}
           {rating && (
             <>
               <span>•</span>
-              <div className="flex items-end gap-1">
+              <div className="flex items-center gap-1">
                 <svg
-                  width="19"
-                  height="19"
+                  width="13"
+                  height="13"
                   viewBox="0 0 19 19"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
@@ -157,15 +146,15 @@ export default function Profile() {
         const [favRes, watchRes] = await Promise.all([
           favoriteList && favoriteList.length
             ? Promise.all(
-                favoriteList.map((id) =>
-                  fetchOneTMDB(id, TMDB_KEY, controller.signal)
+                favoriteList.map((item) =>
+                  fetchOneTMDB(item.id, item.type, TMDB_KEY, controller.signal)
                 )
               )
             : Promise.resolve([]),
           watchList && watchList.length
             ? Promise.all(
-                watchList.map((id) =>
-                  fetchOneTMDB(id, TMDB_KEY, controller.signal)
+                watchList.map((item) =>
+                  fetchOneTMDB(item.id, item.type, TMDB_KEY, controller.signal)
                 )
               )
             : Promise.resolve([]),
@@ -270,10 +259,9 @@ export default function Profile() {
                     id={movie.id}
                     title={movie.title}
                     year={movie.year}
-                    duration={movie.duration}
-                    seasons={movie.seasons}
                     rating={movie.rating}
-                    image={movie.image}
+                    meta={movie.meta}
+                    poster={movie.poster}
                     isSeries={movie.isSeries}
                   />
                 ))}
@@ -312,11 +300,10 @@ export default function Profile() {
                     id={movie.id}
                     title={movie.title}
                     year={movie.year}
-                    duration={movie.duration}
-                    seasons={movie.seasons}
                     rating={movie.rating}
-                    image={movie.image}
+                    poster={movie.poster}
                     isSeries={movie.isSeries}
+                    meta={movie.meta}
                   />
                 ))}
               </div>

@@ -30,7 +30,7 @@ export default function Home() {
           rating: m.vote_average ? m.vote_average.toFixed(1) : 'N/A',
           poster: m.poster_path
             ? `https://image.tmdb.org/t/p/w500${m.poster_path}`
-            : 'https://via.placeholder.com/400x600?text=No+Image',
+            : '/placeholder.png',
         }));
         setMovies(mapped);
       } catch (err) {

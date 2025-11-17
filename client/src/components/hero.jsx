@@ -15,7 +15,7 @@ const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const img = (p) =>
   p
     ? `https://image.tmdb.org/t/p/original${p}`
-    : 'https://via.placeholder.com/1600x900?text=No+Image';
+    : 'https://placehold.co/1600x900?text=No+Image';
 
 async function tmdb(path, params = {}) {
   const q = new URLSearchParams({
@@ -200,17 +200,28 @@ export default function Hero({ items }) {
                           {isAuthenticated && item.id && (
                             <button
                               onClick={() =>
-                                watchList.includes(item.id)
-                                  ? removeFromWatchlist(item.id)
-                                  : addToWatchlist(item.id)
+                                watchList.some(
+                                  (wItem) =>
+                                    item.id === wItem.id &&
+                                    'movie' === wItem.type
+                                )
+                                  ? removeFromWatchlist(item.id, 'movie')
+                                  : addToWatchlist(item.id, 'movie')
                               }
                               className={`px-4 md:px-6 py-3 md:py-3 rounded-lg font-normal transition-colors cursor-pointer bg-[#FF4002] ${
-                                watchList.includes(item.id)
-                                  ? 'bg-[#FF4002] text-black'
+                                watchList.some(
+                                  (wItem) =>
+                                    item.id === wItem.id &&
+                                    'movie' === wItem.type
+                                )
+                                  ? 'bg-[#FF4002] hover:bg-[#B32F03]'
                                   : 'text-white hover:bg-[#B32F03]'
                               }`}
                             >
-                              {watchList.includes(item.id)
+                              {watchList.some(
+                                (wItem) =>
+                                  item.id === wItem.id && 'movie' === wItem.type
+                              )
                                 ? 'Remove from Watchlist'
                                 : 'Add to Watchlist'}
                             </button>
@@ -224,18 +235,37 @@ export default function Hero({ items }) {
                           {isAuthenticated && item.id && (
                             <button
                               onClick={() =>
-                                favoriteList.includes(item.id)
-                                  ? removeFromFavorites(item.id)
-                                  : addToFavorites(item.id)
+                                favoriteList.some(
+                                  (fItem) =>
+                                    item.id === fItem.id &&
+                                    'movie' === fItem.type
+                                )
+                                  ? removeFromFavorites(item.id, 'movie')
+                                  : addToFavorites(item.id, 'movie')
                               }
                               className={`p-2.5 border rounded-lg transition-colors cursor-pointer ${
-                                favoriteList.includes(item.id)
+                                favoriteList.some(
+                                  (fItem) =>
+                                    item.id === fItem.id &&
+                                    'movie' === fItem.type
+                                )
                                   ? 'border-coquelicot bg-coquelicot/90 text-white'
                                   : 'border-white text-white hover:bg-white/10'
                               }`}
                               aria-label="Toggle favorite"
                             >
-                              <Heart className="w-5 h-5 md:w-6 md:h-6" />
+                              <Heart
+                                className="w-5 h-5 md:w-6 md:h-6"
+                                fill={
+                                  favoriteList.some(
+                                    (fItem) =>
+                                      item.id === fItem.id &&
+                                      'movie' === fItem.type
+                                  )
+                                    ? 'white'
+                                    : 'none'
+                                }
+                              />
                             </button>
                           )}
                         </div>

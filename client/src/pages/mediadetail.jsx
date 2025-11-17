@@ -6,9 +6,7 @@ import { Heart } from 'lucide-react';
 import { useAuth } from '@/context/authContext.jsx';
 
 const imageUrl = (path, size = 'w780') =>
-  path
-    ? `https://image.tmdb.org/t/p/${size}${path}`
-    : 'https://via.placeholder.com/400x600?text=No+Image';
+  path ? `https://image.tmdb.org/t/p/${size}${path}` : '/placeholder.png';
 
 export default function MediaDetail() {
   const { id } = useParams();
@@ -125,10 +123,18 @@ export default function MediaDetail() {
     };
   }, [photoViewerOpen, activeReview, fullCastOpen, images]);
 
+  const mediaType = isSeries ? 'series' : 'movie';
   const movieId = Number(id);
-  const inWatchlist = isAuthenticated && movieId && watchList.includes(movieId);
+  const inWatchlist =
+    isAuthenticated &&
+    movieId &&
+    watchList.some((wItem) => movieId === wItem.id && wItem.type === mediaType);
   const inFavorites =
-    isAuthenticated && movieId && favoriteList.includes(movieId);
+    isAuthenticated &&
+    movieId &&
+    favoriteList.some(
+      (fItem) => movieId === fItem.id && fItem.type === mediaType
+    );
 
   const openPhotoViewer = (index) => {
     setPhotoViewerIndex(index);
@@ -260,8 +266,8 @@ export default function MediaDetail() {
                   <button
                     onClick={() =>
                       inWatchlist
-                        ? removeFromWatchlist(movieId)
-                        : addToWatchlist(movieId)
+                        ? removeFromWatchlist(movieId, mediaType)
+                        : addToWatchlist(movieId, mediaType)
                     }
                     className={`px-4 md:px-6 py-2 md:py-2.5 rounded-lg font-normal transition-colors cursor-pointer ${
                       inWatchlist
@@ -275,8 +281,8 @@ export default function MediaDetail() {
                   <button
                     onClick={() =>
                       inFavorites
-                        ? removeFromFavorites(movieId)
-                        : addToFavorites(movieId)
+                        ? removeFromFavorites(movieId, mediaType)
+                        : addToFavorites(movieId, mediaType)
                     }
                     className={`p-2.5 border rounded-lg transition-colors cursor-pointer ${
                       inFavorites
@@ -285,7 +291,10 @@ export default function MediaDetail() {
                     }`}
                     aria-label="Toggle favorite"
                   >
-                    <Heart className="w-5 h-5 md:w-6 md:h-6" />
+                    <Heart
+                      className="w-5 h-5 md:w-6 md:h-6"
+                      fill={inFavorites ? 'white' : 'none'}
+                    />
                   </button>
                 </>
               )}
@@ -385,7 +394,7 @@ export default function MediaDetail() {
                 <button
                   type="button"
                   onClick={() => setFullCastOpen(true)}
-                  className="mt-4 text-white text-base md:text-lg font-semibold hover:text-coquelicot transition-colors underline"
+                  className="mt-4 text-white text-base md:text-lg font-semibold hover:text-coquelicot transition-colors underline cursor-pointer"
                 >
                   View full cast
                 </button>
@@ -609,7 +618,7 @@ export default function MediaDetail() {
             <button
               type="button"
               onClick={closePhotoViewer}
-              className="absolute top-6 right-6 text-white text-2xl"
+              className="absolute top-6 right-6 text-white text-2xl cursor-pointer"
             >
               ×
             </button>
@@ -657,7 +666,7 @@ export default function MediaDetail() {
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              className="absolute top-3 right-3 text-xl"
+              className="absolute top-3 right-3 text-xl cursor-pointer"
               onClick={() => setActiveReview(null)}
             >
               ×
@@ -690,7 +699,7 @@ export default function MediaDetail() {
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              className="absolute top-3 right-3 text-xl"
+              className="absolute top-3 right-3 text-xl cursor-pointer"
               onClick={() => setFullCastOpen(false)}
             >
               ×

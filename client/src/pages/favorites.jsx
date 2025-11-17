@@ -51,11 +51,13 @@ async function fetchOneTMDB(id, type, apiKey, signal) {
     year: (data.release_date || data.first_air_date || '').slice(0, 4),
     rating:
       typeof data.vote_average === 'number'
-        ? data.vote_average.toFixed(1)
+        ? data.vote_average.toFixed(1) === '0.0'
+          ? 'N/A'
+          : data.vote_average.toFixed(1)
         : null,
     poster: data.poster_path
       ? `https://image.tmdb.org/t/p/w342${data.poster_path}`
-      : 'https://via.placeholder.com/342x513?text=No+Image',
+      : '/placeholder.png',
     isSeries,
     meta: seasons || duration || null,
   };
@@ -103,16 +105,16 @@ function ListCard({
           {meta && (
             <>
               <span>•</span>
-              <span className="truncate">{meta}</span>
+              <span>{meta.length > 6 ? meta.slice(0, 6) + '...' : meta}</span>
             </>
           )}
           {rating && (
             <>
               <span>•</span>
-              <div className="flex items-end gap-1">
+              <div className="flex items-center gap-1">
                 <svg
-                  width="19"
-                  height="19"
+                  width="13"
+                  height="13"
                   viewBox="0 0 19 19"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
@@ -192,7 +194,8 @@ export default function Favorites() {
 
   const handleRemove = async (id) => {
     try {
-      await removeFromFavorites(id);
+      const type = activeTab === 'movies' ? 'movie' : 'series';
+      await removeFromFavorites(id, type);
       setItems((prev) => prev.filter((m) => m.id !== id));
     } catch (err) {
       console.error('Failed to remove from favorites', err);
