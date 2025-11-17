@@ -63,7 +63,7 @@ export default function Series() {
   return (
     <div className="min-h-screen bg-[#201E1F] flex flex-col">
       <Header />
-      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] py-16">
+      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] py-16 pt-30">
         <h1 className="text-white font-bold text-[35px] mb-12">Series</h1>
         <div className="flex gap-5 lg:gap-20">
           <aside className="hidden lg:block w-[200px] flex-shrink-0">
@@ -134,6 +134,7 @@ export default function Series() {
                       year={show.year}
                       rating={show.rating}
                       poster={show.poster}
+                      isSeries={true}
                       type="series"
                     />
                   ))}

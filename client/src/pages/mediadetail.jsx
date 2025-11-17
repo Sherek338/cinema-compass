@@ -35,7 +35,6 @@ export default function MediaDetail() {
         );
 
         if (!res.ok) throw new Error('Failed to fetch media details');
-
         const json = await res.json();
         if (!cancelled) setData(json);
       } catch (err) {
@@ -119,7 +118,7 @@ export default function MediaDetail() {
     <div className="min-h-screen bg-[#201E1F] text-white flex flex-col">
       <Header />
 
-      <main className="flex-1 max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-[70px] py-16">
+      <main className="flex-1 max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-[70px] py-16 pt-30">
         <div className="flex flex-col lg:flex-row gap-10">
           <img
             src={

@@ -32,7 +32,7 @@ export default function ActivateAccount() {
     <div className="min-h-screen bg-raisin-black flex flex-col">
       <Header />
 
-      <main className="flex-grow flex items-center justify-center">
+      <main className="flex-grow flex items-center justify-center h-screen">
         <div className="text-center px-6 py-10">
           {status === 'loading' && (
             <>
@@ -65,7 +65,7 @@ export default function ActivateAccount() {
               <p className="text-white/80">{message}</p>
               <button
                 onClick={() => navigate('/')}
-                className="mt-5 bg-coquelicot text-white px-6 py-2 rounded hover:bg-coquelicot/90 transition-colors"
+                className="mt-5 bg-coquelicot text-white px-6 py-2 rounded hover:bg-coquelicot/90 transition-colors cursor-pointer"
               >
                 Go Back Home
               </button>
@@ -94,7 +94,7 @@ export default function ActivateAccount() {
               <p className="text-white/80">{message}</p>
               <button
                 onClick={() => navigate('/')}
-                className="mt-5 bg-coquelicot text-white px-6 py-2 rounded hover:bg-coquelicot/90 transition-colors"
+                className="mt-5 bg-coquelicot text-white px-6 py-2 rounded hover:bg-coquelicot/90 transition-colors cursor-pointer"
               >
                 Go Back Home
               </button>

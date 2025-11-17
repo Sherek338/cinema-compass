@@ -91,7 +91,7 @@ export default function Watchlist() {
   return (
     <div className="min-h-screen bg-[#201E1F] flex flex-col">
       <Header />
-      <main className="flex-1 max-w-7xl mx-auto px-8 lg:px-16 py-12 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-8 lg:px-16 py-12 w-full pt-30">
         <h1 className="text-white font-bold text-[35px] mb-10">My Watchlist</h1>
 
         {loading ? (

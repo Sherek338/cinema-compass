@@ -121,7 +121,7 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-[#201E1F] flex flex-col">
       <Header />
-      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] py-16">
+      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] py-16 pt-30">
         <h1 className="text-white font-bold text-[35px] mb-10">My Profile</h1>
 
         <div className="flex flex-col lg:flex-row gap-10">
