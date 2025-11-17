@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import authRouter from './router/authRouter.js';
-import movieListRouter from './router/movieListRouter.js';
+import movieListRouter from './router/userRouter.js';
 import reviewRouter from './router/reviewRouter.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
 
@@ -33,7 +33,7 @@ app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 
 app.use('/api/auth', authRouter);
-app.use('/api/movielist', movieListRouter);
+app.use('/api/user', movieListRouter);
 app.use('/api/review', reviewRouter);
 
 app.use(errorMiddleware);

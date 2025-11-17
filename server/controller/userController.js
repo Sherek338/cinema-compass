@@ -1,64 +1,100 @@
-import UserModel from "../models/UserModel.js";
-import ApiError from "../exceptions/ApiError.js";
+import movieListService from '../services/userService.js';
 
-export const getUserLists = async (req, res, next) => {
+const getFavorites = async (req, res, next) => {
   try {
-    const user = await UserModel.findById(req.user.id)
-      .select("favoriteList watchList")
-      .lean();
-    if (!user) throw ApiError.NotFound("User not found");
+    const userId = req.user.id;
+    const favorites = await movieListService.getFavorites(userId);
 
-    res.status(200).json({
-      favoriteList: user.favoriteList || [],
-      watchList: user.watchList || [],
-    });
+    res.status(200).json(favorites);
   } catch (e) {
     next(e);
   }
 };
 
-export const updateWatchlist = async (req, res, next) => {
+const updateFavorite = async (req, res, next) => {
   try {
-    const { movieId, action } = req.body;
-    if (!movieId || !["add", "remove"].includes(action)) {
-      throw ApiError.BadRequest("movieId and valid action are required");
-    }
+    const userId = req.user.id;
+    const newId = {
+      id: req.body.id,
+      type: req.body.type,
+    };
 
-    const user = await UserModel.findById(req.user.id);
-    if (!user) throw ApiError.NotFound("User not found");
+    const favorites = await movieListService.updateFavorite(userId, newId);
 
-    if (action === "add" && !user.watchList.includes(movieId)) {
-      user.watchList.push(movieId);
-    } else if (action === "remove") {
-      user.watchList = user.watchList.filter((id) => id !== movieId);
-    }
-
-    await user.save();
-    res.status(200).json({ watchList: user.watchList });
+    res.status(201).json({ message: 'Movie added to favorites', favorites });
   } catch (e) {
     next(e);
   }
 };
 
-export const updateFavorites = async (req, res, next) => {
+const deleteFavorite = async (req, res, next) => {
   try {
-    const { movieId, action } = req.body;
-    if (!movieId || !["add", "remove"].includes(action)) {
-      throw ApiError.BadRequest("movieId and valid action are required");
-    }
+    const userId = req.user.id;
+    const newId = {
+      id: req.body.id,
+      type: req.body.type,
+    };
 
-    const user = await UserModel.findById(req.user.id);
-    if (!user) throw ApiError.NotFound("User not found");
+    const favorites = await movieListService.deleteFavorite(userId, newId);
 
-    if (action === "add" && !user.favoriteList.includes(movieId)) {
-      user.favoriteList.push(movieId);
-    } else if (action === "remove") {
-      user.favoriteList = user.favoriteList.filter((id) => id !== movieId);
-    }
-
-    await user.save();
-    res.status(200).json({ favoriteList: user.favoriteList });
+    res
+      .status(200)
+      .json({ message: 'Movie removed from favorites', favorites });
   } catch (e) {
     next(e);
   }
+};
+
+const getWatchlist = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const watchList = await movieListService.getWatchlist(userId);
+
+    res.status(200).json(watchList);
+  } catch (e) {
+    next(e);
+  }
+};
+
+const updateWatchlist = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const newId = {
+      id: req.body.id,
+      type: req.body.type,
+    };
+
+    const watchList = await movieListService.updateWatchlist(userId, newId);
+
+    res.status(201).json({ message: 'Movie added to watchlist', watchList });
+  } catch (e) {
+    next(e);
+  }
+};
+
+const deleteWatchlist = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const newId = {
+      id: req.body.id,
+      type: req.body.type,
+    };
+
+    const watchList = await movieListService.deleteWatchlist(userId, newId);
+
+    res
+      .status(200)
+      .json({ message: 'Movie removed from watchlist', watchList });
+  } catch (e) {
+    next(e);
+  }
+};
+
+export default {
+  getFavorites,
+  updateFavorite,
+  deleteFavorite,
+  getWatchlist,
+  updateWatchlist,
+  deleteWatchlist,
 };
