@@ -11,7 +11,7 @@ const getFavorites = async (userId) => {
   return favoriteList;
 };
 
-const updateFavorite = async (userId, newId) => {
+const addFavorite = async (userId, newId) => {
   if (!userId || !newId) {
     throw ApiError.BadRequest('User id and Movie id are required');
   }
@@ -65,7 +65,7 @@ const getWatchlist = async (userId) => {
   return watchList;
 };
 
-const updateWatchlist = async (userId, newId) => {
+const addWatchlist = async (userId, newId) => {
   if (!userId || !newId) {
     throw ApiError.BadRequest('User id and Movie id are required');
   }
@@ -111,9 +111,9 @@ const deleteWatchlist = async (userId, newId) => {
 
 export default {
   getFavorites,
-  updateFavorite,
+  addFavorite,
   deleteFavorite,
   getWatchlist,
-  updateWatchlist,
+  addWatchlist,
   deleteWatchlist,
 };
