@@ -41,20 +41,6 @@ export default function UserMenu() {
           >
             <User className="w-4 h-4" /> Profile
           </Link>
-          <Link
-            to="/watchlist"
-            className="flex items-center gap-2 px-4 py-3 hover:bg-white/10 text-white text-sm"
-            onClick={() => setOpen(false)}
-          >
-            <ListVideo className="w-4 h-4" /> Watchlist
-          </Link>
-          <Link
-            to="/favorites"
-            className="flex items-center gap-2 px-4 py-3 hover:bg-white/10 text-white text-sm"
-            onClick={() => setOpen(false)}
-          >
-            <Heart className="w-4 h-4" /> Favorites
-          </Link>
           <button
             className="w-full flex items-center gap-2 px-4 py-3 hover:bg-white/10 text-white text-left text-sm"
             onClick={onLogout}

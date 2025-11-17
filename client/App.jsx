@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './src/context/authContext';
+
+import ScrollToTop from '@/components/ScrollToTop';
 
 import Index from '@/pages/index.jsx';
-import Movies from './src/pages/movies';
+import Movies from './src/pages/movies.jsx';
 import Series from '@/pages/series.jsx';
 import Profile from '@/pages/profile.jsx';
 import MediaDetail from '@/pages/mediadetail.jsx';
 import Watchlist from '@/pages/watchlist.jsx';
 import Favorites from '@/pages/favorites.jsx';
-import SearchResults from '@/pages/searchresults';
+import SearchResults from '@/pages/searchresults.jsx';
 import ActivateAccount from '@/pages/activate.jsx';
 
 import AuthModal from '@/components/authmodal.jsx';
@@ -37,7 +38,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthModal open={showAuthModal} onClose={() => setShowAuthModal(false)} />
-
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/movies" element={<Movies />} />
@@ -57,7 +58,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/favorites"
           element={

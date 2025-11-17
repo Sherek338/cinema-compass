@@ -1,6 +1,7 @@
-// Hero.jsx
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/context/authContext.jsx';
+import { Heart } from 'lucide-react';
 
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectFade, Navigation } from 'swiper/modules';
@@ -8,9 +9,6 @@ import { EffectFade, Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/effect-fade';
 import 'swiper/css/navigation';
-
-import Favorite from '@/assets/Favorite.svg';
-import FavoriteFull from '@/assets/FavoriteFull.svg';
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
@@ -37,6 +35,16 @@ export default function Hero({ items }) {
   const [slides, setSlides] = useState(items ?? []);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(!items || !items.length);
+
+  const {
+    isAuthenticated,
+    watchList,
+    favoriteList,
+    addToWatchlist,
+    removeFromWatchlist,
+    addToFavorites,
+    removeFromFavorites,
+  } = useAuth();
 
   useEffect(() => {
     if (items && items.length) {
@@ -137,6 +145,7 @@ export default function Hero({ items }) {
                             {genresText}
                           </div>
                         )}
+
                         <h2 className="text-white font-bold text-[34px] sm:text-[46px] lg:text-[56px] leading-tight drop-shadow">
                           {item.title || ''}
                         </h2>
@@ -187,29 +196,48 @@ export default function Hero({ items }) {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-3">
-                          <button className="px-4 py-2 rounded-lg bg-[#FF4002] text-white font-semibold hover:bg-[#B32F03] cursor-pointer transition">
-                            Add to Watchlist
-                          </button>
-
+                        <div className="flex flex-wrap items-center gap-3 md:gap-4">
+                          {isAuthenticated && item.id && (
+                            <button
+                              onClick={() =>
+                                watchList.includes(item.id)
+                                  ? removeFromWatchlist(item.id)
+                                  : addToWatchlist(item.id)
+                              }
+                              className={`px-4 md:px-6 py-3 md:py-3 rounded-lg font-normal transition-colors cursor-pointer bg-[#FF4002] ${
+                                watchList.includes(item.id)
+                                  ? 'bg-[#FF4002] text-black'
+                                  : 'text-white hover:bg-[#B32F03]'
+                              }`}
+                            >
+                              {watchList.includes(item.id)
+                                ? 'Remove from Watchlist'
+                                : 'Add to Watchlist'}
+                            </button>
+                          )}
                           <Link
-                            to={
-                              item.media_type === 'tv'
-                                ? `/series/${item.id}`
-                                : `/movies/${item.id}`
-                            }
-                            className="px-4 py-2 rounded-lg bg-transperent border-white border text-white hover:bg-white hover:text-black transition cursor-pointer"
+                            to={'/movies/' + item.id}
+                            className="px-4 md:px-6 py-2 md:py-2.5 border border-white text-white text-sm md:text-base lg:text-[18px] rounded-lg hover:bg-white hover:text-black transition-colors cursor-pointer"
                           >
                             View more
                           </Link>
-
-                          <button className="relative w-8 h-8 cursor-pointer">
-                            <img src={Favorite} className="absolute inset-0" />
-                            <img
-                              src={FavoriteFull}
-                              className="absolute inset-0 transition-opacity opacity-0 hover:opacity-100"
-                            />
-                          </button>
+                          {isAuthenticated && item.id && (
+                            <button
+                              onClick={() =>
+                                favoriteList.includes(item.id)
+                                  ? removeFromFavorites(item.id)
+                                  : addToFavorites(item.id)
+                              }
+                              className={`p-2.5 border rounded-lg transition-colors cursor-pointer ${
+                                favoriteList.includes(item.id)
+                                  ? 'border-coquelicot bg-coquelicot/90 text-white'
+                                  : 'border-white text-white hover:bg-white/10'
+                              }`}
+                              aria-label="Toggle favorite"
+                            >
+                              <Heart className="w-5 h-5 md:w-6 md:h-6" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

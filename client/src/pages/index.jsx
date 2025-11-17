@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 import Hero from '@/components/hero.jsx';
-import MediaCard from '@/components/mediacard';
-import { Link } from 'react-router-dom';
+import MediaCard from '@/components/mediacard.jsx';
 
 export default function Home() {
   const [movies, setMovies] = useState([]);
   const [series, setSeries] = useState([]);
   const [loadingMovies, setLoadingMovies] = useState(true);
   const [loadingSeries, setLoadingSeries] = useState(true);
+  const [activeTab, setActiveTab] = useState('movies');
+
   const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export default function Home() {
         setLoadingMovies(false);
       }
     };
+
     fetchMovies();
   }, [API_KEY]);
 
@@ -64,80 +67,326 @@ export default function Home() {
         setLoadingSeries(false);
       }
     };
+
     fetchSeries();
   }, [API_KEY]);
 
+  const trendingMovies = movies.slice(0, 10);
+  const newReleaseMovies = movies.slice(10, 20);
+  const topRatedMovies = [...movies]
+    .slice()
+    .sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0))
+    .slice(0, 10);
+  const watchlistMovies = movies.slice(0, 6);
+
+  const trendingSeries = series.slice(0, 10);
+  const newReleaseSeries = series.slice(10, 20);
+  const topRatedSeries = [...series]
+    .slice()
+    .sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0))
+    .slice(0, 10);
+  const seriesWatchlist = series.slice(0, 6);
+
   return (
-    <div className="min-h-screen bg-[#201E1F] flex flex-col">
+    <div className="min-h-screen bg-raisin-black flex flex-col">
       <Header />
-      <main className="flex-1 flex flex-col">
+
+      <main className="flex-1 pt-0">
         <Hero />
 
-        <section className="max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] py-16">
-          <div className="flex justify-between items-center mb-12">
-            <h1 className="text-white font-bold text-[35px]">Popular Movies</h1>
-            <Link
-              to={'/movies'}
-              className="text-white text-xl hover:underline transition"
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[70px] py-10 md:py-12 lg:py-16">
+          <div className="flex items-center justify-center gap-6 md:gap-10 mb-12 md:mb-16">
+            <button
+              onClick={() => setActiveTab('movies')}
+              className="flex flex-col items-start gap-[5px] hover:opacity-80 transition-opacity cursor-pointer"
             >
-              View all <span className="sr-only">series</span>
-            </Link>
+              <h2
+                className={`text-xl md:text-[25px] ${
+                  activeTab === 'movies'
+                    ? 'font-bold text-white'
+                    : 'font-normal text-white'
+                }`}
+              >
+                Movies
+              </h2>
+              {activeTab === 'movies' && (
+                <div className="w-full h-[2px] bg-coquelicot" />
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('series')}
+              className="flex flex-col items-start gap-[5px] hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              <h2
+                className={`text-xl md:text-[25px] ${
+                  activeTab === 'series'
+                    ? 'font-bold text-white'
+                    : 'font-normal text-white'
+                }`}
+              >
+                Series
+              </h2>
+              {activeTab === 'series' && (
+                <div className="w-full h-[2px] bg-coquelicot" />
+              )}
+            </button>
           </div>
 
-          {loadingMovies ? (
+          {activeTab === 'movies' ? (
+            loadingMovies ? (
+              <div className="w-full flex justify-center items-center min-h-[300px]">
+                <div className="w-12 h-12 rounded-full border-4 border-coquelicot border-t-transparent animate-spin" />
+              </div>
+            ) : (
+              <>
+                <section className="mb-12 md:mb-16">
+                  <div className="flex items-end justify-between mb-4 md:mb-6">
+                    <h2 className="text-white text-2xl md:text-[30px] font-bold">
+                      Trending Now
+                    </h2>
+                    <Link
+                      to="/movies"
+                      className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors"
+                    >
+                      View all
+                    </Link>
+                  </div>
+                  <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
+                    {trendingMovies.map((movie) => (
+                      <MediaCard
+                        key={movie.id}
+                        id={movie.id}
+                        title={movie.title}
+                        year={movie.year}
+                        rating={movie.rating}
+                        poster={movie.poster}
+                        isSeries={false}
+                      />
+                    ))}
+                  </div>
+                </section>
+
+                <section className="mb-12 md:mb-16">
+                  <div className="flex items-end justify-between mb-4 md:mb-6">
+                    <h2 className="text-white text-2xl md:text-[30px] font-bold">
+                      New Release
+                    </h2>
+                    <Link
+                      to="/movies"
+                      className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors"
+                    >
+                      View all
+                    </Link>
+                  </div>
+                  <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
+                    {newReleaseMovies.map((movie) => (
+                      <MediaCard
+                        key={movie.id}
+                        id={movie.id}
+                        title={movie.title}
+                        year={movie.year}
+                        rating={movie.rating}
+                        poster={movie.poster}
+                        isSeries={false}
+                      />
+                    ))}
+                  </div>
+                </section>
+
+                <section className="mb-12 md:mb-16">
+                  <div className="flex items-end justify-between mb-4 md:mb-6">
+                    <h2 className="text-white text-2xl md:text-[30px] font-bold">
+                      Top Rated
+                    </h2>
+                    <Link
+                      to="/movies"
+                      className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors"
+                    >
+                      View all
+                    </Link>
+                  </div>
+                  <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
+                    {topRatedMovies.map((movie) => (
+                      <MediaCard
+                        key={movie.id}
+                        id={movie.id}
+                        title={movie.title}
+                        year={movie.year}
+                        rating={movie.rating}
+                        poster={movie.poster}
+                        isSeries={false}
+                      />
+                    ))}
+                  </div>
+                </section>
+
+                <section>
+                  <div className="flex items-end justify-between mb-4 md:mb-6">
+                    <h2 className="text-white text-2xl md:text-[30px] font-bold">
+                      My Watchlist
+                    </h2>
+                    <Link
+                      to="/watchlist"
+                      className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors"
+                    >
+                      View all
+                    </Link>
+                  </div>
+                  <div className="flex gap-4 md:gap-5 overflow-x-auto scrollbar-hide">
+                    {watchlistMovies.map((movie) => (
+                      <MediaCard
+                        key={movie.id}
+                        id={movie.id}
+                        title={movie.title}
+                        year={movie.year}
+                        rating={movie.rating}
+                        poster={movie.poster}
+                        isSeries={false}
+                      />
+                    ))}
+
+                    <Link
+                      to="/watchlist"
+                      className="flex-shrink-0 flex items-center justify-center w-[180px] h-[260px] border border-[#3F3F3F] bg-[#343434] rounded-[10px] cursor-pointer hover:border-coquelicot transition-colors group"
+                    >
+                      <div className="relative w-9 h-9">
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-9 h-[2px] bg-white group-hover:bg-coquelicot transition-colors" />
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-9 bg-white group-hover:bg-coquelicot transition-colors" />
+                      </div>
+                    </Link>
+                  </div>
+                </section>
+              </>
+            )
+          ) : loadingSeries ? (
             <div className="w-full flex justify-center items-center min-h-[300px]">
-              <div className="w-12 h-12 rounded-full border-4 border-[#FF4002] border-t-transparent animate-spin" />
+              <div className="w-12 h-12 rounded-full border-4 border-coquelicot border-t-transparent animate-spin" />
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
-              {movies.slice(0, 10).map((movie) => (
-                <MediaCard
-                  key={movie.id}
-                  id={movie.id}
-                  title={movie.title}
-                  year={movie.year}
-                  rating={movie.rating}
-                  poster={movie.poster}
-                  type="movie"
-                />
-              ))}
-            </div>
-          )}
-        </section>
+            <>
+              <section className="mb-12 md:mb-16">
+                <div className="flex items-end justify-between mb-4 md:mb-6">
+                  <h2 className="text-white text-2xl md:text-[30px] font-bold">
+                    Trending Now
+                  </h2>
+                  <Link
+                    to="/series"
+                    className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors"
+                  >
+                    View all
+                  </Link>
+                </div>
+                <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
+                  {trendingSeries.map((show) => (
+                    <MediaCard
+                      key={show.id}
+                      id={show.id}
+                      title={show.title}
+                      year={show.year}
+                      rating={show.rating}
+                      poster={show.poster}
+                      isSeries={true}
+                    />
+                  ))}
+                </div>
+              </section>
 
-        <section className="max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] pb-16">
-          <div className="flex justify-between items-center mb-12">
-            <h1 className="text-white font-bold text-[35px]">Popular Series</h1>
-            <Link
-              to={'/series'}
-              className="text-white text-xl hover:underline transition"
-            >
-              View all <span className="sr-only">series</span>
-            </Link>
-          </div>
+              <section className="mb-12 md:mb-16">
+                <div className="flex items-end justify-between mb-4 md:mb-6">
+                  <h2 className="text-white text-2xl md:text-[30px] font-bold">
+                    New Release
+                  </h2>
+                  <Link
+                    to="/series"
+                    className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors"
+                  >
+                    View all
+                  </Link>
+                </div>
+                <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
+                  {newReleaseSeries.map((show) => (
+                    <MediaCard
+                      key={show.id}
+                      id={show.id}
+                      title={show.title}
+                      year={show.year}
+                      rating={show.rating}
+                      poster={show.poster}
+                      isSeries={true}
+                    />
+                  ))}
+                </div>
+              </section>
 
-          {loadingSeries ? (
-            <div className="w-full flex justify-center items-center min-h-[300px]">
-              <div className="w-12 h-12 rounded-full border-4 border-[#FF4002] border-t-transparent animate-spin" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
-              {series.slice(0, 10).map((show) => (
-                <MediaCard
-                  key={show.id}
-                  id={show.id}
-                  title={show.title}
-                  year={show.year}
-                  rating={show.rating}
-                  poster={show.poster}
-                  isSeries={true}
-                  type="series"
-                />
-              ))}
-            </div>
+              <section className="mb-12 md:mb-16">
+                <div className="flex items-end justify-between mb-4 md:mb-6">
+                  <h2 className="text-white text-2xl md:text-[30px] font-bold">
+                    Top Rated
+                  </h2>
+                  <Link
+                    to="/series"
+                    className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors"
+                  >
+                    View all
+                  </Link>
+                </div>
+                <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
+                  {topRatedSeries.map((show) => (
+                    <MediaCard
+                      key={show.id}
+                      id={show.id}
+                      title={show.title}
+                      year={show.year}
+                      rating={show.rating}
+                      poster={show.poster}
+                      isSeries={true}
+                    />
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <div className="flex items-end justify-between mb-4 md:mb-6">
+                  <h2 className="text-white text-2xl md:text-[30px] font-bold">
+                    My Watchlist
+                  </h2>
+                  <Link
+                    to="/watchlist"
+                    className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors"
+                  >
+                    View all
+                  </Link>
+                </div>
+                <div className="flex gap-4 md:gap-5 overflow-x-auto scrollbar-hide">
+                  {seriesWatchlist.map((show) => (
+                    <MediaCard
+                      key={show.id}
+                      id={show.id}
+                      title={show.title}
+                      year={show.year}
+                      rating={show.rating}
+                      poster={show.poster}
+                      isSeries={true}
+                    />
+                  ))}
+
+                  <Link
+                    to="/watchlist"
+                    className="flex-shrink-0 flex items-center justify-center w-[180px] h-[260px] border border-[#3F3F3F] bg-[#343434] rounded-[10px] cursor-pointer hover:border-coquelicot transition-colors group"
+                  >
+                    <div className="relative w-9 h-9">
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-9 h-[2px] bg-white group-hover:bg-coquelicot transition-colors" />
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-9 bg-white group-hover:bg-coquelicot transition-colors" />
+                    </div>
+                  </Link>
+                </div>
+              </section>
+            </>
           )}
-        </section>
+        </div>
       </main>
+
       <Footer />
     </div>
   );
