@@ -1,9 +1,9 @@
-import movieListService from '../services/userService.js';
+import userService from '../services/userService.js';
 
 const getFavorites = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const favorites = await movieListService.getFavorites(userId);
+    const favorites = await userService.getFavorites(userId);
 
     res.status(200).json(favorites);
   } catch (e) {
@@ -21,12 +21,12 @@ const updateFavorite = async (req, res, next) => {
     };
 
     if (action === 'add') {
-      const favorites = await movieListService.updateFavorite(userId, newId);
+      const favorites = await userService.addFavorite(userId, newId);
       return res
         .status(201)
         .json({ message: 'Movie added to favorites', favorites });
     } else if (action === 'remove') {
-      const favorites = await movieListService.deleteFavorite(userId, newId);
+      const favorites = await userService.deleteFavorite(userId, newId);
       return res
         .status(200)
         .json({ message: 'Movie removed from favorites', favorites });
@@ -40,7 +40,7 @@ const updateFavorite = async (req, res, next) => {
 const getWatchlist = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const watchList = await movieListService.getWatchlist(userId);
+    const watchList = await userService.getWatchlist(userId);
 
     res.status(200).json(watchList);
   } catch (e) {
@@ -58,12 +58,12 @@ const updateWatchlist = async (req, res, next) => {
     };
 
     if (action === 'add') {
-      const watchList = await movieListService.addWatchlist(userId, newId);
+      const watchList = await userService.addWatchlist(userId, newId);
       return res
         .status(201)
         .json({ message: 'Movie added to watchlist', watchList });
     } else if (action === 'remove') {
-      const watchList = await movieListService.deleteWatchlist(userId, newId);
+      const watchList = await userService.deleteWatchlist(userId, newId);
       return res
         .status(200)
         .json({ message: 'Movie removed from watchlist', watchList });
