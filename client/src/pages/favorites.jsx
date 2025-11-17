@@ -15,11 +15,9 @@ function formatRuntime(runtime) {
   return `${h}h ${m}m`;
 }
 
-async function fetchOneTMDB(id, apiKey, signal) {
-  let res = await fetch(
-    `${TMDB_BASE}/movie/${id}?api_key=${apiKey}&language=en-US`,
-    { signal }
-  );
+async function fetchOneTMDB(id, type, apiKey, signal) {
+  const url = `${TMDB_BASE}/${type === 'movie' ? 'movie' : 'tv'}/${id}?api_key=${apiKey}&language=en-US`;
+  let res = await fetch(url, { signal });
 
   let mediaType = 'movie';
 
@@ -34,7 +32,7 @@ async function fetchOneTMDB(id, apiKey, signal) {
 
   const data = await res.json();
 
-  const isSeries = mediaType === 'tv';
+  const isSeries = type === 'series';
   const seasons =
     isSeries && typeof data.number_of_seasons === 'number'
       ? `${data.number_of_seasons} season${
@@ -88,7 +86,7 @@ function ListCard({
       {onRemove && (
         <button
           onClick={onRemove}
-          className="absolute top-2 right-2 text-xs px-2 py-1 bg-black/70 rounded hover:bg-black/90 transition"
+          className="absolute top-2 right-2 text-xs px-2 py-1 bg-black/70 rounded hover:bg-black/90 transition cursor-pointer z-10"
         >
           Remove
         </button>
@@ -165,8 +163,8 @@ export default function Favorites() {
         }
 
         const results = await Promise.all(
-          favoriteList.map((id) =>
-            fetchOneTMDB(id, TMDB_KEY, controller.signal)
+          favoriteList.map((item) =>
+            fetchOneTMDB(item.id, item.type, TMDB_KEY, controller.signal)
           )
         );
 
@@ -219,7 +217,7 @@ export default function Favorites() {
               className={`text-[25px] transition ${
                 activeTab === 'movies'
                   ? 'text-white font-bold'
-                  : 'text-white font-normal'
+                  : 'text-white font-normal cursor-pointer'
               }`}
             >
               Movies
@@ -234,7 +232,7 @@ export default function Favorites() {
               className={`text-[25px] transition ${
                 activeTab === 'series'
                   ? 'text-white font-bold'
-                  : 'text-white font-normal'
+                  : 'text-white font-normal cursor-pointer'
               }`}
             >
               Series

@@ -65,24 +65,31 @@ export function AuthProvider({ children }) {
   const watchList = user?.watchList || [];
   const favoriteList = user?.favoriteList || [];
 
-  const fetchMe = useCallback(async () => {
-    try {
-      const data = await apiRequest('/api/auth/refresh', {
-        method: 'GET',
-      });
+  const fetchMe = useCallback(() => {
+    if (!fetchMe.currentPromise) {
+      fetchMe.currentPromise = (async () => {
+        try {
+          const data = await apiRequest('/api/auth/refresh', { method: 'GET' });
 
-      if (data?.user && data?.accessToken) {
-        saveAuth(data);
-        return data;
-      }
+          if (data?.user && data?.accessToken) {
+            saveAuth(data);
+            return data;
+          }
 
-      saveAuth(null);
-      return null;
-    } catch {
-      saveAuth(null);
-      return null;
+          saveAuth(null);
+          return null;
+        } catch {
+          saveAuth(null);
+          return null;
+        } finally {
+          fetchMe.currentPromise = null;
+        }
+      })();
     }
+
+    return fetchMe.currentPromise;
   }, [apiRequest, saveAuth]);
+  fetchMe.currentPromise = null;
 
   useEffect(() => {
     let cancelled = false;
@@ -154,14 +161,14 @@ export function AuthProvider({ children }) {
   }, [apiRequest]);
 
   const updateWatchlist = useCallback(
-    async (movieId, action) => {
+    async (movieId, type, action) => {
       const id = Number(movieId);
       if (!id) return null;
 
       const data = await apiRequest('/api/user/watchlist', {
         method: 'PUT',
         headers: authHeaders,
-        body: JSON.stringify({ movieId: id, action }),
+        body: JSON.stringify({ id, type, action }),
       });
 
       if (data.user) {
@@ -178,14 +185,14 @@ export function AuthProvider({ children }) {
   );
 
   const updateFavorites = useCallback(
-    async (movieId, action) => {
+    async (movieId, type, action) => {
       const id = Number(movieId);
       if (!id) return null;
 
-      const data = await apiRequest('/api/user/favorites', {
+      const data = await apiRequest('/api/user/favorite', {
         method: 'PUT',
         headers: authHeaders,
-        body: JSON.stringify({ movieId: id, action }),
+        body: JSON.stringify({ id, type, action }),
       });
 
       if (data.user) {
@@ -202,22 +209,22 @@ export function AuthProvider({ children }) {
   );
 
   const addToWatchlist = useCallback(
-    (movieId) => updateWatchlist(movieId, 'add'),
+    (movieId, type) => updateWatchlist(movieId, type, 'add'),
     [updateWatchlist]
   );
 
   const removeFromWatchlist = useCallback(
-    (movieId) => updateWatchlist(movieId, 'remove'),
+    (movieId, type) => updateWatchlist(movieId, type, 'remove'),
     [updateWatchlist]
   );
 
   const addToFavorites = useCallback(
-    (movieId) => updateFavorites(movieId, 'add'),
+    (movieId, type) => updateFavorites(movieId, type, 'add'),
     [updateFavorites]
   );
 
   const removeFromFavorites = useCallback(
-    (movieId) => updateFavorites(movieId, 'remove'),
+    (movieId, type) => updateFavorites(movieId, type, 'remove'),
     [updateFavorites]
   );
 
