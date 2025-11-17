@@ -8,6 +8,7 @@ const router = express.Router();
 const validateList = [
   body('type').isString().withMessage('Type must be a string'),
   body('id').isNumeric().withMessage('Id must be a number'),
+  body('action').isString().withMessage('Action mush be a string'),
 ];
 
 const validationError = (req, res, next) => {
@@ -25,13 +26,6 @@ router.put(
   validationError,
   controller.updateFavorite
 );
-router.delete(
-  '/favorite',
-  authMiddleware,
-  validateList,
-  validationError,
-  controller.deleteFavorite
-);
 router.get(
   '/favorite',
   authMiddleware,
@@ -46,13 +40,6 @@ router.put(
   validateList,
   validationError,
   controller.updateWatchlist
-);
-router.delete(
-  '/watchlist',
-  authMiddleware,
-  validateList,
-  validationError,
-  controller.deleteWatchlist
 );
 router.get(
   '/watchlist',

@@ -13,33 +13,25 @@ const getFavorites = async (req, res, next) => {
 
 const updateFavorite = async (req, res, next) => {
   try {
+    const action = req.body.action;
     const userId = req.user.id;
     const newId = {
       id: req.body.id,
       type: req.body.type,
     };
 
-    const favorites = await movieListService.updateFavorite(userId, newId);
-
-    res.status(201).json({ message: 'Movie added to favorites', favorites });
-  } catch (e) {
-    next(e);
-  }
-};
-
-const deleteFavorite = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const newId = {
-      id: req.body.id,
-      type: req.body.type,
-    };
-
-    const favorites = await movieListService.deleteFavorite(userId, newId);
-
-    res
-      .status(200)
-      .json({ message: 'Movie removed from favorites', favorites });
+    if (action === 'add') {
+      const favorites = await movieListService.updateFavorite(userId, newId);
+      return res
+        .status(201)
+        .json({ message: 'Movie added to favorites', favorites });
+    } else if (action === 'remove') {
+      const favorites = await movieListService.deleteFavorite(userId, newId);
+      return res
+        .status(200)
+        .json({ message: 'Movie removed from favorites', favorites });
+    }
+    res.status(400);
   } catch (e) {
     next(e);
   }
@@ -58,33 +50,25 @@ const getWatchlist = async (req, res, next) => {
 
 const updateWatchlist = async (req, res, next) => {
   try {
+    const action = req.body.action;
     const userId = req.user.id;
     const newId = {
       id: req.body.id,
       type: req.body.type,
     };
 
-    const watchList = await movieListService.updateWatchlist(userId, newId);
-
-    res.status(201).json({ message: 'Movie added to watchlist', watchList });
-  } catch (e) {
-    next(e);
-  }
-};
-
-const deleteWatchlist = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const newId = {
-      id: req.body.id,
-      type: req.body.type,
-    };
-
-    const watchList = await movieListService.deleteWatchlist(userId, newId);
-
-    res
-      .status(200)
-      .json({ message: 'Movie removed from watchlist', watchList });
+    if (action === 'add') {
+      const watchList = await movieListService.addWatchlist(userId, newId);
+      return res
+        .status(201)
+        .json({ message: 'Movie added to watchlist', watchList });
+    } else if (action === 'remove') {
+      const watchList = await movieListService.deleteWatchlist(userId, newId);
+      return res
+        .status(200)
+        .json({ message: 'Movie removed from watchlist', watchList });
+    }
+    res.status(400);
   } catch (e) {
     next(e);
   }
@@ -93,8 +77,6 @@ const deleteWatchlist = async (req, res, next) => {
 export default {
   getFavorites,
   updateFavorite,
-  deleteFavorite,
   getWatchlist,
   updateWatchlist,
-  deleteWatchlist,
 };
