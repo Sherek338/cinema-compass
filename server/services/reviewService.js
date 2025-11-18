@@ -7,9 +7,7 @@ const asDtoList = (docs, currentUserId = null) =>
   docs.map((r) => {
     const dto = new ReviewDTO(r);
     dto.isOwner =
-      !!currentUserId &&
-      r.user &&
-      String(r.user) === String(currentUserId);
+      !!currentUserId && r.user && String(r.user) === String(currentUserId);
     return dto;
   });
 
@@ -17,24 +15,29 @@ const getReviewsByUserId = async (userId) => {
   if (!userId) {
     throw ApiError.BadRequest('User id is required');
   }
-  const reviews = await ReviewModel.find({ user: userId }).sort({ createdAt: -1 });
+  const reviews = await ReviewModel.find({ user: userId }).sort({
+    createdAt: -1,
+  });
   return asDtoList(reviews, userId);
 };
 
-const getReviewsByMovieId = async (movieId, currentUserId = null) => {
+const getReviewsByMovieId = async (movieId, isSeries, currentUserId = null) => {
   if (!Number.isFinite(movieId)) {
     throw ApiError.BadRequest('Movie id is required');
   }
-  const reviews = await ReviewModel.find({ movieId }).sort({ createdAt: -1 });
+  const reviews = await ReviewModel.find({ movieId, isSeries }).sort({
+    createdAt: -1,
+  });
   return asDtoList(reviews, currentUserId);
 };
 
-const addReview = async (userId, movieId, data) => {
+const addReview = async (userId, movieId, review) => {
   if (!userId) throw ApiError.UnauthorizedError();
   if (!Number.isFinite(movieId)) throw ApiError.BadRequest('Invalid movie id');
-  if (!data?.review?.trim()) throw ApiError.BadRequest('Review text is required');
+  if (!review?.review?.trim())
+    throw ApiError.BadRequest('Review text is required');
 
-  let authorName = data.author;
+  let authorName = review.author;
   if (!authorName) {
     const u = await UserModel.findById(userId).lean();
     authorName = u?.username || 'Anonymous';
@@ -42,10 +45,11 @@ const addReview = async (userId, movieId, data) => {
 
   const created = await ReviewModel.create({
     user: userId,
-    author: authorName,
-    review: data.review.trim(),
-    rating: Number(data.rating) || 0,
     movieId,
+    author: authorName,
+    review: review.review.trim(),
+    rating: Number(review.rating) || 0,
+    isSeries: review.isSeries,
   });
 
   const dto = new ReviewDTO(created);
@@ -56,7 +60,9 @@ const addReview = async (userId, movieId, data) => {
 const mustOwn = (review, userId) => {
   if (!review) throw ApiError.NotFound('Review not found');
   if (!review.user || String(review.user) !== String(userId)) {
-    throw ApiError.Forbidden('You do not have permission to modify this review');
+    throw ApiError.Forbidden(
+      'You do not have permission to modify this review'
+    );
   }
 };
 

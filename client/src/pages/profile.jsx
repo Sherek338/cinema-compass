@@ -171,7 +171,7 @@ function UserReviewCard({
         <button
           type="button"
           onClick={onEdit}
-          className="text-white text-[15px] font-bold italic hover:opacity-80 transition-opacity"
+          className="text-white text-[15px] font-bold italic hover:opacity-80 transition-opacity cursor-pointer"
         >
           Edit
         </button>
@@ -179,7 +179,7 @@ function UserReviewCard({
           type="button"
           onClick={onDelete}
           disabled={deleting}
-          className="text-white text-[15px] font-bold italic hover:opacity-80 transition-opacity disabled:opacity-50"
+          className="text-white text-[15px] font-bold italic hover:opacity-80 transition-opacity disabled:opacity-50 cursor-pointer"
         >
           {deleting ? 'Deleting...' : 'Delete'}
         </button>
@@ -271,7 +271,7 @@ export default function Profile() {
           return;
         }
 
-        const res = await fetch(`${API_URL}/api/reviews/user`, {
+        const res = await fetch(`${API_URL}/api/review/user`, {
           method: 'GET',
           credentials: 'include',
           headers: { ...authHeaders },

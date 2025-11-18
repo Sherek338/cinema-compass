@@ -439,105 +439,15 @@ export default function MediaDetail() {
             </div>
           </div>
 
-          <UserReviews
-            key={`${movieId}-${isSeries ? 'series' : 'movie'}`}
-            movieId={movieId}
-            canWrite={isAuthenticated}
-            isSeries={isSeries}
-            title={displayTitle}
-          />
-
-          <section className="mb-12 md:mb-16">
-            <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">
-              Reviews
-            </h2>
-            {reviewList.length === 0 && (
-              <p className="text-white/70 text-sm">No reviews yet.</p>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-4">
-              {reviewList.map((review) => {
-                const rawRating = review.author_details?.rating ?? 0;
-                const starRating = Math.max(
-                  0,
-                  Math.min(5, Math.round(rawRating / 2))
-                );
-                const content = review.content || '';
-                const short = content.slice(0, 220);
-                const showReadMore = content.length > 220;
-
-                return (
-                  <div
-                    key={review.id}
-                    className="bg-coquelicot rounded-[20px] p-4 md:p-5 flex flex-col"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        {review.author_details?.avatar_path && (
-                          <img
-                            src={
-                              review.author_details.avatar_path.startsWith(
-                                'http'
-                              )
-                                ? review.author_details.avatar_path.replace(
-                                    /^\/+/,
-                                    ''
-                                  )
-                                : imageUrl(
-                                    review.author_details.avatar_path,
-                                    'w185'
-                                  )
-                            }
-                            alt={review.author || 'Avatar'}
-                            className="w-9 h-9 rounded-full object-cover"
-                          />
-                        )}
-                        <div>
-                          <h3 className="text-white text-lg md:text-[20px] font-semibold">
-                            {review.author || 'Anonymous'}
-                          </h3>
-                          <p className="text-white text-xs">
-                            <span className="font-semibold">Posted on:</span>{' '}
-                            {review.created_at
-                              ? new Date(review.created_at).toLocaleDateString()
-                              : 'Unknown'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-0.5">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <svg
-                            key={i}
-                            width="19"
-                            height="19"
-                            viewBox="0 0 19 19"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M16.3458 8.95142C16.9886 8.37204 16.6419 7.30502 15.7813 7.21413L12.5459 6.87245C12.191 6.83497 11.8829 6.61116 11.7376 6.28519L10.4133 3.31494C10.0609 2.52454 8.93905 2.52454 8.58666 3.31494L7.26241 6.28519C7.11708 6.61116 6.80903 6.83497 6.4541 6.87245L3.2187 7.21413C2.35808 7.30502 2.01139 8.37204 2.65423 8.95142L5.07077 11.1294C5.33589 11.3684 5.45356 11.7305 5.37953 12.0796L4.70499 15.261C4.52549 16.1076 5.43316 16.7671 6.18284 16.3347L9.00041 14.7098C9.3096 14.5314 9.6904 14.5314 9.99959 14.7098L12.8172 16.3347C13.5668 16.7671 14.4745 16.1076 14.295 15.261L13.6205 12.0796C13.5464 11.7305 13.6641 11.3684 13.9292 11.1294L16.3458 8.95142Z"
-                              fill={i < starRating ? '#F5C519' : '#CACACA'}
-                            />
-                          </svg>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="text-white text-sm md:text-[15px] text-justify flex-1">
-                      {short}
-                      {showReadMore && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveReview(review)}
-                          className="text-white/80 text-xs md:text-[13px] font-semibold ml-1 underline"
-                        >
-                          Read more
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+          <div className="mb-5">
+            <UserReviews
+              key={`${movieId}-${isSeries ? 'series' : 'movie'}`}
+              movieId={movieId}
+              canWrite={isAuthenticated}
+              isSeries={isSeries}
+              title={displayTitle}
+            />
+          </div>
 
           <section className="mb-12 md:mb-16">
             <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">

@@ -102,7 +102,7 @@ const refresh = async (refreshToken) => {
 
   const tokenModel = await tokenService.findToken(refreshToken);
   if (!tokenModel) {
-    throw ApiError.BadRequest('');
+    throw ApiError.BadRequest('Not found token');
   }
 
   const user = await UserModel.findById(tokenModel.user);

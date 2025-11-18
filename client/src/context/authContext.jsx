@@ -5,6 +5,7 @@ import {
   useMemo,
   useState,
   useCallback,
+  useRef,
 } from 'react';
 
 const AuthContext = createContext(null);
@@ -12,104 +13,99 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState('');
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+
+  const tokenRef = useRef('');
+
+  const setAccessToken = (token) => {
+    tokenRef.current = token || '';
+  };
+
+  const isAuthenticated = !!user?.id;
 
   const apiRequest = useCallback(async (endpoint, options = {}) => {
     const url = `${API_URL}${endpoint}`;
 
-    try {
-      const res = await fetch(url, {
-        ...options,
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(options.headers || {}),
-        },
-      });
+    const headers = {
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(tokenRef.current
+        ? { Authorization: `Bearer ${tokenRef.current}` }
+        : {}),
+      ...(options.headers || {}),
+    };
 
-      if (!res.ok) {
-        let errBody = null;
-        try {
-          errBody = await res.json();
-        } catch {}
-        const msg =
-          errBody?.message ||
-          `Request to ${endpoint} failed with status ${res.status}`;
-        throw new Error(msg);
-      }
+    const res = await fetch(url, {
+      ...options,
+      credentials: 'include',
+      headers,
+    });
 
+    if (!res.ok) {
+      let body = null;
       try {
-        return await res.json();
-      } catch {
-        return {};
-      }
-    } catch (err) {
-      console.error(`API error [${endpoint}]`, err);
-      throw err;
+        body = await res.json();
+      } catch {}
+      throw new Error(body?.message || `${endpoint} failed: ${res.status}`);
+    }
+
+    try {
+      return await res.json();
+    } catch {
+      return {};
     }
   }, []);
 
+  const refreshPromiseRef = useRef(null);
+
+  const refreshSession = useCallback(() => {
+    if (refreshPromiseRef.current) {
+      return refreshPromiseRef.current;
+    }
+
+    refreshPromiseRef.current = (async () => {
+      try {
+        const data = await apiRequest('/api/auth/refresh', { method: 'GET' });
+
+        if (data?.user && data?.accessToken) {
+          setUser(data.user);
+          setAccessToken(data.accessToken);
+        } else {
+          setUser(null);
+          setAccessToken('');
+        }
+      } catch (err) {
+        setUser(null);
+        setAccessToken('');
+      } finally {
+        setLoading(false);
+        refreshPromiseRef.current = null;
+      }
+    })();
+
+    return refreshPromiseRef.current;
+  }, [apiRequest]);
+
+  useEffect(() => {
+    refreshSession();
+  }, [refreshSession]);
+
   const saveAuth = useCallback((data) => {
-    if (!data || !data.user || !data.accessToken) {
+    if (!data?.user) {
       setUser(null);
       setAccessToken('');
       return;
     }
+
     setUser(data.user);
-    setAccessToken(data.accessToken);
+    if (data.accessToken) setAccessToken(data.accessToken);
   }, []);
 
   const authHeaders = useMemo(
     () =>
-      accessToken
-        ? {
-            Authorization: `Bearer ${accessToken}`,
-          }
-        : {},
-    [accessToken]
+      tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {},
+    [tokenRef.current]
   );
-
-  const isAuthenticated = !!user?.id;
-
-  const watchList = user?.watchList || [];
-  const favoriteList = user?.favoriteList || [];
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
-      setLoading(true);
-      try {
-        const data = await apiRequest('/api/auth/refresh', {
-          method: 'GET',
-        });
-
-        if (!cancelled && data?.user && data?.accessToken) {
-          saveAuth(data);
-        } else if (!cancelled) {
-          setUser(null);
-          setAccessToken('');
-        }
-      } catch {
-        if (!cancelled) {
-          setUser(null);
-          setAccessToken('');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    run();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [apiRequest, saveAuth]);
 
   const login = useCallback(
     async (email, password) => {
@@ -136,9 +132,7 @@ export function AuthProvider({ children }) {
         saveAuth(data);
         setModalOpen(false);
       } else if (data?.user && data.user.isActivated === false) {
-        alert(
-          'Account created. Please check your email and activate your account.'
-        );
+        alert('Account created. Activate via email.');
       }
 
       return data;
@@ -149,84 +143,54 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     try {
       await apiRequest('/api/auth/logout', { method: 'POST' });
-    } catch (e) {
-      console.error('Logout error', e);
-    } finally {
-      setUser(null);
-      setAccessToken('');
-    }
+    } catch {}
+    setUser(null);
+    setAccessToken('');
   }, [apiRequest]);
 
   const optimisticUpdateList = useCallback((listName, id, type, action) => {
     setUser((prev) => {
       if (!prev) return prev;
-
       const current = prev[listName] || [];
-      const idx = current.findIndex(
-        (item) => item.id === id && item.type === type
-      );
 
       let next = current;
+      const idx = current.findIndex((i) => i.id === id && i.type === type);
 
-      if (action === 'add') {
-        if (idx === -1) {
-          next = [...current, { id, type }];
-        }
-      } else if (action === 'remove') {
-        if (idx !== -1) {
-          next = current.filter((_, i) => i !== idx);
-        }
-      }
+      if (action === 'add' && idx === -1) next = [...current, { id, type }];
+      if (action === 'remove' && idx !== -1)
+        next = current.filter((_, i) => i !== idx);
 
-      return {
-        ...prev,
-        [listName]: next,
-      };
+      return { ...prev, [listName]: next };
     });
   }, []);
 
   const updateWatchlist = useCallback(
     async (movieId, type, action) => {
-      const id = Number(movieId);
-      if (!id || !type || !action) return null;
-
-      optimisticUpdateList('watchList', id, type, action);
+      const body = { id: Number(movieId), type, action };
+      optimisticUpdateList('watchList', body.id, type, action);
 
       try {
         const data = await apiRequest('/api/user/watchlist', {
           method: 'PUT',
-          headers: authHeaders,
-          body: JSON.stringify({ id, type, action }),
+          body: JSON.stringify(body),
         });
-
-        if (data?.user) {
-          setUser(data.user);
-        } else if (Array.isArray(data?.watchList)) {
-          setUser((prev) =>
-            prev ? { ...prev, watchList: data.watchList } : prev
-          );
-        }
-
+        if (data.user) setUser(data.user);
         return data;
-      } catch (err) {
-        console.error('updateWatchlist failed', err);
+      } catch {
         return null;
       }
     },
-    [apiRequest, authHeaders, optimisticUpdateList]
+    [apiRequest, optimisticUpdateList]
   );
 
   const updateFavorites = useCallback(
     async (movieId, type, action) => {
       const id = Number(movieId);
-      if (!id || !type || !action) return null;
-
       optimisticUpdateList('favoriteList', id, type, action);
 
       try {
         const data = await apiRequest('/api/user/favorite', {
           method: 'PUT',
-          headers: authHeaders,
           body: JSON.stringify({ id, type, action }),
         });
 
@@ -239,76 +203,47 @@ export function AuthProvider({ children }) {
         }
 
         return data;
-      } catch (err) {
-        console.error('updateFavorites failed', err);
-        // keep optimistic state
+      } catch {
         return null;
       }
     },
-    [apiRequest, authHeaders, optimisticUpdateList]
-  );
-
-  const addToWatchlist = useCallback(
-    (movieId, type) => updateWatchlist(movieId, type, 'add'),
-    [updateWatchlist]
-  );
-
-  const removeFromWatchlist = useCallback(
-    (movieId, type) => updateWatchlist(movieId, type, 'remove'),
-    [updateWatchlist]
-  );
-
-  const addToFavorites = useCallback(
-    (movieId, type) => updateFavorites(movieId, type, 'add'),
-    [updateFavorites]
-  );
-
-  const removeFromFavorites = useCallback(
-    (movieId, type) => updateFavorites(movieId, type, 'remove'),
-    [updateFavorites]
+    [apiRequest, optimisticUpdateList]
   );
 
   const value = useMemo(
     () => ({
       user,
       setUser,
-      accessToken,
+      accessToken: tokenRef.current,
       isAuthenticated,
       authHeaders,
       loading,
       modalOpen,
       setModalOpen,
-      watchList,
-      favoriteList,
+      watchList: user?.watchList || [],
+      favoriteList: user?.favoriteList || [],
       login,
       register,
       logout,
       updateWatchlist,
       updateFavorites,
-      addToWatchlist,
-      removeFromWatchlist,
-      addToFavorites,
-      removeFromFavorites,
+      addToWatchlist: (id, type) => updateWatchlist(id, type, 'add'),
+      removeFromWatchlist: (id, type) => updateWatchlist(id, type, 'remove'),
+      addToFavorites: (id, type) => updateFavorites(id, type, 'add'),
+      removeFromFavorites: (id, type) => updateFavorites(id, type, 'remove'),
       apiRequest,
     }),
     [
       user,
-      accessToken,
       isAuthenticated,
       authHeaders,
       loading,
       modalOpen,
-      watchList,
-      favoriteList,
       login,
       register,
       logout,
       updateWatchlist,
       updateFavorites,
-      addToWatchlist,
-      removeFromWatchlist,
-      addToFavorites,
-      removeFromFavorites,
       apiRequest,
     ]
   );
@@ -318,8 +253,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
