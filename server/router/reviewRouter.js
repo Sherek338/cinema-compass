@@ -33,30 +33,26 @@ const validateReview = [
     }),
 ];
 
+const validateTypeId = [
+  body('type').isString().withMessage('Type must be a string'),
+  body('id').isNumeric().withMessage('Id must be a number'),
+];
+
 router.get('/user', authMiddleware, controller.getReviewsByUserId);
 
-router.get('/movie/:movieId', controller.getReviewsByMovieId);
+router.get('/:type/:movieId', controller.getReviewsByMovieId);
 
 router.post(
-  '/movie/:movieId',
+  '/',
   authMiddleware,
   validateReview,
+  validateTypeId,
   validationError,
   controller.addReview
 );
 
-router.put(
-  '/:reviewId',
-  authMiddleware,
-  validateReview,
-  validationError,
-  controller.updateReview
-);
+router.put('/:reviewId', authMiddleware, controller.updateReview);
 
-router.delete(
-  '/:reviewId',
-  authMiddleware,
-  controller.deleteReview
-);
+router.delete('/:reviewId', authMiddleware, controller.deleteReview);
 
 export default router;

@@ -13,11 +13,16 @@ const getReviewsByUserId = async (req, res, next) => {
 const getReviewsByMovieId = async (req, res, next) => {
   try {
     const movieId = Number(req.params.movieId);
+    const isSeries = req.params.type === 'series';
     if (!Number.isFinite(movieId)) {
       return res.status(400).json({ message: 'Invalid movie id' });
     }
-    const maybeUserId = req.user?.id || null; // allow isOwner flag if logged in
-    const reviews = await reviewService.getReviewsByMovieId(movieId, maybeUserId);
+    const maybeUserId = req.user?.id || null;
+    const reviews = await reviewService.getReviewsByMovieId(
+      movieId,
+      isSeries,
+      maybeUserId
+    );
     res.status(200).json(reviews);
   } catch (e) {
     next(e);
@@ -27,7 +32,9 @@ const getReviewsByMovieId = async (req, res, next) => {
 const addReview = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const movieId = Number(req.params.movieId);
+    const movieId = Number(req.body.id);
+    const isSeries = req.body.type === 'series';
+    console.log(isSeries);
     if (!Number.isFinite(movieId)) {
       return res.status(400).json({ message: 'Invalid movie id' });
     }
@@ -35,6 +42,7 @@ const addReview = async (req, res, next) => {
       author: req.user?.username || req.user?.email || 'Anonymous',
       review: req.body.review,
       rating: req.body.rating,
+      isSeries,
     };
     const review = await reviewService.addReview(userId, movieId, reviewData);
     res.status(201).json(review);
