@@ -1,14 +1,15 @@
 import express from 'express';
+import { body, validationResult } from 'express-validator';
 import authMiddleware from '../middleware/authMiddleware.js';
 import controller from '../controller/userController.js';
-import { body, validationResult } from 'express-validator';
+import ApiError from '../exceptions/ApiError.js';
 
 const router = express.Router();
 
 const validateList = [
   body('type').isString().withMessage('Type must be a string'),
   body('id').isNumeric().withMessage('Id must be a number'),
-  body('action').isString().withMessage('Action mush be a string'),
+  body('action').isString().withMessage('Action must be a string'),
 ];
 
 const validationError = (req, res, next) => {

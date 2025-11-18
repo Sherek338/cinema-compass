@@ -9,9 +9,10 @@ dotenv.config();
 import authRouter from './router/authRouter.js';
 import movieListRouter from './router/userRouter.js';
 import reviewRouter from './router/reviewRouter.js';
-import authRouter from './router/adminRouter.js';
+import adminRouter from './router/adminRouter.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
 
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const PORT = process.env.PORT || 3000;
 const URI = process.env.DB_URI;
 const clientOptions = {
@@ -36,7 +37,7 @@ app.options(/.*/, cors(corsOptions));
 app.use('/api/auth', authRouter);
 app.use('/api/user', movieListRouter);
 app.use('/api/review', reviewRouter);
-app.use('/api/admin', authRouter);
+app.use('/api/admin', adminRouter);
 
 app.use(errorMiddleware);
 

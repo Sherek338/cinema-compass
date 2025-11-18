@@ -16,11 +16,11 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const isAuthenticated = !!user && !!accessToken;
-
   const apiRequest = useCallback(async (endpoint, options = {}) => {
+    const url = `${API_URL}${endpoint}`;
+
     try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const res = await fetch(url, {
         ...options,
         credentials: 'include',
         headers: {
@@ -29,21 +29,25 @@ export function AuthProvider({ children }) {
         },
       });
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(
-          error.message || `Request failed with status ${response.status}`
-        );
+      if (!res.ok) {
+        let errBody = null;
+        try {
+          errBody = await res.json();
+        } catch {}
+        const msg =
+          errBody?.message ||
+          `Request to ${endpoint} failed with status ${res.status}`;
+        throw new Error(msg);
       }
 
       try {
-        return await response.json();
+        return await res.json();
       } catch {
         return {};
       }
-    } catch (error) {
-      console.error(`API Error [${endpoint}]:`, error);
-      throw error;
+    } catch (err) {
+      console.error(`API error [${endpoint}]`, err);
+      throw err;
     }
   }, []);
 
@@ -58,58 +62,54 @@ export function AuthProvider({ children }) {
   }, []);
 
   const authHeaders = useMemo(
-    () => (accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    () =>
+      accessToken
+        ? {
+            Authorization: `Bearer ${accessToken}`,
+          }
+        : {},
     [accessToken]
   );
+
+  const isAuthenticated = !!user?.id;
 
   const watchList = user?.watchList || [];
   const favoriteList = user?.favoriteList || [];
 
-  const fetchMe = useCallback(() => {
-    if (!fetchMe.currentPromise) {
-      fetchMe.currentPromise = (async () => {
-        try {
-          const data = await apiRequest('/api/auth/refresh', { method: 'GET' });
-
-          if (data?.user && data?.accessToken) {
-            saveAuth(data);
-            return data;
-          }
-
-          saveAuth(null);
-          return null;
-        } catch {
-          saveAuth(null);
-          return null;
-        } finally {
-          fetchMe.currentPromise = null;
-        }
-      })();
-    }
-
-    return fetchMe.currentPromise;
-  }, [apiRequest, saveAuth]);
-  fetchMe.currentPromise = null;
-
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
+    const run = async () => {
       setLoading(true);
-      const data = await fetchMe();
-      if (!cancelled) {
-        if (!data) {
+      try {
+        const data = await apiRequest('/api/auth/refresh', {
+          method: 'GET',
+        });
+
+        if (!cancelled && data?.user && data?.accessToken) {
+          saveAuth(data);
+        } else if (!cancelled) {
           setUser(null);
           setAccessToken('');
         }
-        setLoading(false);
+      } catch {
+        if (!cancelled) {
+          setUser(null);
+          setAccessToken('');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    })();
+    };
+
+    run();
 
     return () => {
       cancelled = true;
     };
-  }, [fetchMe]);
+  }, [apiRequest, saveAuth]);
 
   const login = useCallback(
     async (email, password) => {
@@ -132,16 +132,15 @@ export function AuthProvider({ children }) {
         body: JSON.stringify({ username, email, password }),
       });
 
-      if (data?.user?.isActivated === false) {
+      if (data?.user?.isActivated && data?.accessToken) {
+        saveAuth(data);
+        setModalOpen(false);
+      } else if (data?.user && data.user.isActivated === false) {
         alert(
-          'Registration successful! Please check your email to activate your account.'
+          'Account created. Please check your email and activate your account.'
         );
-        saveAuth(data);
-      } else {
-        saveAuth(data);
       }
 
-      setModalOpen(false);
       return data;
     },
     [apiRequest, saveAuth]
@@ -149,63 +148,104 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
-      await apiRequest('/api/auth/logout', {
-        method: 'POST',
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
+      await apiRequest('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.error('Logout error', e);
     } finally {
       setUser(null);
       setAccessToken('');
     }
   }, [apiRequest]);
 
+  const optimisticUpdateList = useCallback((listName, id, type, action) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+
+      const current = prev[listName] || [];
+      const idx = current.findIndex(
+        (item) => item.id === id && item.type === type
+      );
+
+      let next = current;
+
+      if (action === 'add') {
+        if (idx === -1) {
+          next = [...current, { id, type }];
+        }
+      } else if (action === 'remove') {
+        if (idx !== -1) {
+          next = current.filter((_, i) => i !== idx);
+        }
+      }
+
+      return {
+        ...prev,
+        [listName]: next,
+      };
+    });
+  }, []);
+
   const updateWatchlist = useCallback(
     async (movieId, type, action) => {
       const id = Number(movieId);
-      if (!id) return null;
+      if (!id || !type || !action) return null;
 
-      const data = await apiRequest('/api/user/watchlist', {
-        method: 'PUT',
-        headers: authHeaders,
-        body: JSON.stringify({ id, type, action }),
-      });
+      optimisticUpdateList('watchList', id, type, action);
 
-      if (data.user) {
-        setUser(data.user);
-      } else if (Array.isArray(data.watchList)) {
-        setUser((prev) =>
-          prev ? { ...prev, watchList: data.watchList } : prev
-        );
+      try {
+        const data = await apiRequest('/api/user/watchlist', {
+          method: 'PUT',
+          headers: authHeaders,
+          body: JSON.stringify({ id, type, action }),
+        });
+
+        if (data?.user) {
+          setUser(data.user);
+        } else if (Array.isArray(data?.watchList)) {
+          setUser((prev) =>
+            prev ? { ...prev, watchList: data.watchList } : prev
+          );
+        }
+
+        return data;
+      } catch (err) {
+        console.error('updateWatchlist failed', err);
+        return null;
       }
-
-      return data;
     },
-    [apiRequest, authHeaders]
+    [apiRequest, authHeaders, optimisticUpdateList]
   );
 
   const updateFavorites = useCallback(
     async (movieId, type, action) => {
       const id = Number(movieId);
-      if (!id) return null;
+      if (!id || !type || !action) return null;
 
-      const data = await apiRequest('/api/user/favorite', {
-        method: 'PUT',
-        headers: authHeaders,
-        body: JSON.stringify({ id, type, action }),
-      });
+      optimisticUpdateList('favoriteList', id, type, action);
 
-      if (data.user) {
-        setUser(data.user);
-      } else if (Array.isArray(data.favorites)) {
-        setUser((prev) =>
-          prev ? { ...prev, favoriteList: data.favorites } : prev
-        );
+      try {
+        const data = await apiRequest('/api/user/favorite', {
+          method: 'PUT',
+          headers: authHeaders,
+          body: JSON.stringify({ id, type, action }),
+        });
+
+        if (data?.user) {
+          setUser(data.user);
+        } else if (Array.isArray(data?.favorites)) {
+          setUser((prev) =>
+            prev ? { ...prev, favoriteList: data.favorites } : prev
+          );
+        }
+
+        return data;
+      } catch (err) {
+        console.error('updateFavorites failed', err);
+        // keep optimistic state
+        return null;
       }
-
-      return data;
     },
-    [apiRequest, authHeaders]
+    [apiRequest, authHeaders, optimisticUpdateList]
   );
 
   const addToWatchlist = useCallback(
@@ -243,7 +283,6 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
-      fetchMe,
       updateWatchlist,
       updateFavorites,
       addToWatchlist,
@@ -264,7 +303,6 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
-      fetchMe,
       updateWatchlist,
       updateFavorites,
       addToWatchlist,

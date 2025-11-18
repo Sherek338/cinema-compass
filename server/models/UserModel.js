@@ -1,5 +1,13 @@
 import { Schema, model } from 'mongoose';
 
+const MediaRefSchema = new Schema(
+  {
+    id: { type: Number, required: true },
+    type: { type: String, enum: ['movie', 'series'], required: true },
+  },
+  { _id: false }
+);
+
 const UserSchema = new Schema(
   {
     email: {

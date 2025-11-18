@@ -4,6 +4,7 @@ import Header from '@/components/header.jsx';
 import Footer from '@/components/footer.jsx';
 import { Heart } from 'lucide-react';
 import { useAuth } from '@/context/authContext.jsx';
+import UserReviews from '@/components/UserReviews.jsx';
 
 const imageUrl = (path, size = 'w780') =>
   path ? `https://image.tmdb.org/t/p/${size}${path}` : '/placeholder.png';
@@ -125,6 +126,7 @@ export default function MediaDetail() {
 
   const mediaType = isSeries ? 'series' : 'movie';
   const movieId = Number(id);
+
   const inWatchlist =
     isAuthenticated &&
     movieId &&
@@ -135,6 +137,47 @@ export default function MediaDetail() {
     favoriteList.some(
       (fItem) => movieId === fItem.id && fItem.type === mediaType
     );
+
+  const [localInWatchlist, setLocalInWatchlist] = useState(inWatchlist);
+  const [localInFavorites, setLocalInFavorites] = useState(inFavorites);
+
+  useEffect(() => {
+    setLocalInWatchlist(inWatchlist);
+  }, [inWatchlist]);
+
+  useEffect(() => {
+    setLocalInFavorites(inFavorites);
+  }, [inFavorites]);
+
+  const handleWatchlistClick = async () => {
+    if (!isAuthenticated || !movieId) return;
+    try {
+      if (localInWatchlist) {
+        await removeFromWatchlist(movieId, mediaType);
+        setLocalInWatchlist(false);
+      } else {
+        await addToWatchlist(movieId, mediaType);
+        setLocalInWatchlist(true);
+      }
+    } catch (err) {
+      console.error('Failed to update watchlist', err);
+    }
+  };
+
+  const handleFavoritesClick = async () => {
+    if (!isAuthenticated || !movieId) return;
+    try {
+      if (localInFavorites) {
+        await removeFromFavorites(movieId, mediaType);
+        setLocalInFavorites(false);
+      } else {
+        await addToFavorites(movieId, mediaType);
+        setLocalInFavorites(true);
+      }
+    } catch (err) {
+      console.error('Failed to update favorites', err);
+    }
+  };
 
   const openPhotoViewer = (index) => {
     setPhotoViewerIndex(index);
@@ -264,28 +307,22 @@ export default function MediaDetail() {
               {isAuthenticated && movieId && (
                 <>
                   <button
-                    onClick={() =>
-                      inWatchlist
-                        ? removeFromWatchlist(movieId, mediaType)
-                        : addToWatchlist(movieId, mediaType)
-                    }
+                    onClick={handleWatchlistClick}
                     className={`px-4 md:px-6 py-2 md:py-2.5 rounded-lg font-normal transition-colors cursor-pointer ${
-                      inWatchlist
+                      localInWatchlist
                         ? 'bg-white text-black'
                         : 'border border-white/80 text-white hover:bg-white/10'
                     }`}
                   >
-                    {inWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
+                    {localInWatchlist
+                      ? 'Remove from Watchlist'
+                      : 'Add to Watchlist'}
                   </button>
 
                   <button
-                    onClick={() =>
-                      inFavorites
-                        ? removeFromFavorites(movieId, mediaType)
-                        : addToFavorites(movieId, mediaType)
-                    }
+                    onClick={handleFavoritesClick}
                     className={`p-2.5 border rounded-lg transition-colors cursor-pointer ${
-                      inFavorites
+                      localInFavorites
                         ? 'border-coquelicot bg-coquelicot/90 text-white'
                         : 'border-white text-white hover:bg-white/10'
                     }`}
@@ -293,7 +330,7 @@ export default function MediaDetail() {
                   >
                     <Heart
                       className="w-5 h-5 md:w-6 md:h-6"
-                      fill={inFavorites ? 'white' : 'none'}
+                      fill={localInFavorites ? 'white' : 'none'}
                     />
                   </button>
                 </>
@@ -401,6 +438,14 @@ export default function MediaDetail() {
               )}
             </div>
           </div>
+
+          <UserReviews
+            key={`${movieId}-${isSeries ? 'series' : 'movie'}`}
+            movieId={movieId}
+            canWrite={isAuthenticated}
+            isSeries={isSeries}
+            title={displayTitle}
+          />
 
           <section className="mb-12 md:mb-16">
             <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">
@@ -572,7 +617,7 @@ export default function MediaDetail() {
                     <h3 className="text-white text-lg md:text-[20px] font-semibold mb-1 leading-tight">
                       {recTitle}
                     </h3>
-                    <div className="flex items-center gap-2 text-white text-sm md:text-[15px] font-semibold">
+                    <div className="flex items-end gap-2.5 text-white font-semibold text-[15px]">
                       <span>{recYear}</span>
                       <span>•</span>
                       <div className="flex items-center gap-1">
@@ -584,7 +629,7 @@ export default function MediaDetail() {
                           xmlns="http://www.w3.org/2000/svg"
                         >
                           <path
-                            d="M16.3458 8.95142C16.9886 8.37204 16.6419 7.30502 15.7813 7.21413L12.5459 6.87245C12.191 6.83497 11.8829 6.61116 11.7376 6.28519L10.4133 3.31494C10.0609 2.52454 8.93905 2.52454 8.58666 3.31494L7.26241 6.28519C7.11708 6.61116 6.80903 6.83497 6.4541 6.87245L3.2187 7.21413C2.35808 7.30502 2.01139 8.37204 2.65423 8.95142L5.07077 11.1294C5.33589 11.3684 5.45356 11.7305 5.37953 12.0796L4.70499 15.261C4.52549 16.1076 5.43316 16.7671 6.18284 16.3347L9.00041 14.7098C9.3096 14.5314 9.6904 14.5314 9.99959 14.7098L12.8172 16.3347C13.5668 16.7671 14.4745 16.1076 14.295 15.261L13.6205 12.0796C13.5464 11.7305 13.6641 11.3684 13.9292 11.1294L16.3458 8.95142Z"
+                            d="M16.346 8.95142C16.9889 8.37204 16.6419 7.30502 15.7813 7.21413L12.5459 6.87245C12.191 6.83497 11.8829 6.61116 11.7376 6.28519L10.4133 3.31494C10.0609 2.52454 8.93905 2.52454 8.58666 3.31494L7.26241 6.28519C7.11708 6.61116 6.80903 6.83497 6.4541 6.87245L3.2187 7.21413C2.35808 7.30502 2.01139 8.37204 2.65423 8.95142L5.07077 11.1294C5.33589 11.3684 5.45356 11.7305 5.37953 12.0796L4.70499 15.261C4.52549 16.1076 5.43316 16.7671 6.18284 16.3347L9.00041 14.7098C9.3096 14.5314 9.6904 14.5314 9.99959 14.7098L12.8172 16.3347C13.5668 16.7671 14.4745 16.1076 14.295 15.261L13.6205 12.0796C13.5467 11.7305 13.6644 11.3684 13.9295 11.1294L16.346 8.95142Z"
                             fill="#F5C519"
                           />
                         </svg>

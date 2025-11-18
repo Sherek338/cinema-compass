@@ -9,9 +9,10 @@ const ReviewSchema = new Schema({
   },
   author: { type: String, required: true },
   review: { type: String, required: true },
-  movieId: { type: Number, required: true, index: true },
-  createdAt: { type: Date, default: Date.now },
   rating: { type: Number, required: true, min: 0, max: 5 },
+  movieId: { type: Number, required: true, index: true },
+  isSeries: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
 });
 
 ReviewSchema.index({ user: 1, movieId: 1 });
