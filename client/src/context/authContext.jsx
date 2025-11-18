@@ -5,55 +5,57 @@ import {
   useMemo,
   useState,
   useCallback,
-} from "react";
+} from 'react';
 
 const AuthContext = createContext(null);
 const API_URL = import.meta.env.VITE_API_URL;
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState("");
+  const [accessToken, setAccessToken] = useState('');
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const isAuthenticated = !!user && !!accessToken;
+  const apiRequest = useCallback(async (endpoint, options = {}) => {
+    const url = `${API_URL}${endpoint}`;
 
-  const apiRequest = useCallback(
-    async (endpoint, options = {}) => {
-      try {
-        const response = await fetch(`${API_URL}${endpoint}`, {
-          ...options,
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            ...(options.headers || {}),
-          },
-        });
+    try {
+      const res = await fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.headers || {}),
+        },
+      });
 
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          throw new Error(
-            error.message || `Request failed with status ${response.status}`
-          );
-        }
-
+      if (!res.ok) {
+        let errBody = null;
         try {
-          return await response.json();
+          errBody = await res.json();
         } catch {
-          return {};
         }
-      } catch (error) {
-        console.error(`API Error [${endpoint}]:`, error);
-        throw error;
+        const msg =
+          errBody?.message ||
+          `Request to ${endpoint} failed with status ${res.status}`;
+        throw new Error(msg);
       }
-    },
-    []
-  );
+
+      try {
+        return await res.json();
+      } catch {
+        return {};
+      }
+    } catch (err) {
+      console.error(`API error [${endpoint}]`, err);
+      throw err;
+    }
+  }, []);
 
   const saveAuth = useCallback((data) => {
     if (!data || !data.user || !data.accessToken) {
       setUser(null);
-      setAccessToken("");
+      setAccessToken('');
       return;
     }
     setUser(data.user);
@@ -61,56 +63,59 @@ export function AuthProvider({ children }) {
   }, []);
 
   const authHeaders = useMemo(
-    () => (accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-    [accessToken]
+    () =>
+      accessToken
+        ? {
+          Authorization: `Bearer ${accessToken}`,
+        }
+        : {},
+    [accessToken],
   );
+
+  const isAuthenticated = !!user?.id;
 
   const watchList = user?.watchList || [];
   const favoriteList = user?.favoriteList || [];
 
-  const fetchMe = useCallback(async () => {
-    try {
-      const data = await apiRequest("/api/auth/refresh", {
-        method: "GET",
-      });
-
-      if (data?.user && data?.accessToken) {
-        saveAuth(data);
-        return data;
-      }
-
-      saveAuth(null);
-      return null;
-    } catch {
-      saveAuth(null);
-      return null;
-    }
-  }, [apiRequest, saveAuth]);
-
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
+    const run = async () => {
       setLoading(true);
-      const data = await fetchMe();
-      if (!cancelled) {
-        if (!data) {
+      try {
+        const data = await apiRequest('/api/auth/refresh', {
+          method: 'GET',
+        });
+
+        if (!cancelled && data?.user && data?.accessToken) {
+          saveAuth(data);
+        } else if (!cancelled) {
           setUser(null);
-          setAccessToken("");
+          setAccessToken('');
         }
-        setLoading(false);
+      } catch {
+        if (!cancelled) {
+          setUser(null);
+          setAccessToken('');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    })();
+    };
+
+    run();
 
     return () => {
       cancelled = true;
     };
-  }, [fetchMe]);
+  }, [apiRequest, saveAuth]);
 
   const login = useCallback(
     async (email, password) => {
-      const data = await apiRequest("/api/auth/login", {
-        method: "POST",
+      const data = await apiRequest('/api/auth/login', {
+        method: 'POST',
         body: JSON.stringify({ email, password }),
       });
 
@@ -118,110 +123,150 @@ export function AuthProvider({ children }) {
       setModalOpen(false);
       return data;
     },
-    [apiRequest, saveAuth]
+    [apiRequest, saveAuth],
   );
 
   const register = useCallback(
     async (username, email, password) => {
-      const data = await apiRequest("/api/auth/registration", {
-        method: "POST",
+      const data = await apiRequest('/api/auth/registration', {
+        method: 'POST',
         body: JSON.stringify({ username, email, password }),
       });
 
-      if (data?.user?.isActivated === false) {
+      if (data?.user?.isActivated && data?.accessToken) {
+        saveAuth(data);
+        setModalOpen(false);
+      } else if (data?.user && data.user.isActivated === false) {
         alert(
-          "Registration successful! Please check your email to activate your account."
+          'Account created. Please check your email and activate your account.',
         );
-        saveAuth(data);
-      } else {
-        saveAuth(data);
       }
 
-      setModalOpen(false);
       return data;
     },
-    [apiRequest, saveAuth]
+    [apiRequest, saveAuth],
   );
 
   const logout = useCallback(async () => {
     try {
-      await apiRequest("/api/auth/logout", {
-        method: "POST",
-      });
-    } catch (error) {
-      console.error("Logout error:", error);
+      await apiRequest('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.error('Logout error', e);
     } finally {
       setUser(null);
-      setAccessToken("");
+      setAccessToken('');
     }
   }, [apiRequest]);
 
-  const updateWatchlist = useCallback(
-    async (movieId, action) => {
-      const id = Number(movieId);
-      if (!id) return null;
+  const optimisticUpdateList = useCallback((listName, id, type, action) => {
+    setUser((prev) => {
+      if (!prev) return prev;
 
-      const data = await apiRequest("/api/user/watchlist", {
-        method: "PUT",
-        headers: authHeaders,
-        body: JSON.stringify({ movieId: id, action }),
-      });
+      const current = prev[listName] || [];
+      const idx = current.findIndex(
+        (item) => item.id === id && item.type === type,
+      );
 
-      if (data.user) {
-        setUser(data.user);
-      } else if (Array.isArray(data.watchList)) {
-        setUser((prev) =>
-          prev ? { ...prev, watchList: data.watchList } : prev
-        );
+      let next = current;
+
+      if (action === 'add') {
+        if (idx === -1) {
+          next = [...current, { id, type }];
+        }
+      } else if (action === 'remove') {
+        if (idx !== -1) {
+          next = current.filter((_, i) => i !== idx);
+        }
       }
 
-      return data;
+      return {
+        ...prev,
+        [listName]: next,
+      };
+    });
+  }, []);
+
+  const updateWatchlist = useCallback(
+    async (movieId, type, action) => {
+      const id = Number(movieId);
+      if (!id || !type || !action) return null;
+
+      optimisticUpdateList('watchList', id, type, action);
+
+      try {
+        const data = await apiRequest('/api/user/watchlist', {
+          method: 'PUT',
+          headers: authHeaders,
+          body: JSON.stringify({ id, type, action }),
+        });
+
+        if (data?.user) {
+          setUser(data.user);
+        } else if (Array.isArray(data?.watchList)) {
+          setUser((prev) =>
+            prev ? { ...prev, watchList: data.watchList } : prev,
+          );
+        }
+
+        return data;
+      } catch (err) {
+        console.error('updateWatchlist failed', err);
+        return null;
+      }
     },
-    [apiRequest, authHeaders]
+    [apiRequest, authHeaders, optimisticUpdateList],
   );
 
   const updateFavorites = useCallback(
-    async (movieId, action) => {
+    async (movieId, type, action) => {
       const id = Number(movieId);
-      if (!id) return null;
+      if (!id || !type || !action) return null;
 
-      const data = await apiRequest("/api/user/favorites", {
-        method: "PUT",
-        headers: authHeaders,
-        body: JSON.stringify({ movieId: id, action }),
-      });
+      optimisticUpdateList('favoriteList', id, type, action);
 
-      if (data.user) {
-        setUser(data.user);
-      } else if (Array.isArray(data.favoriteList)) {
-        setUser((prev) =>
-          prev ? { ...prev, favoriteList: data.favoriteList } : prev
-        );
+      try {
+        const data = await apiRequest('/api/user/favorite', {
+          method: 'PUT',
+          headers: authHeaders,
+          body: JSON.stringify({ id, type, action }),
+        });
+
+        if (data?.user) {
+          setUser(data.user);
+        } else if (Array.isArray(data?.favorites)) {
+          setUser((prev) =>
+            prev ? { ...prev, favoriteList: data.favorites } : prev,
+          );
+        }
+
+        return data;
+      } catch (err) {
+        console.error('updateFavorites failed', err);
+        // keep optimistic state
+        return null;
       }
-
-      return data;
     },
-    [apiRequest, authHeaders]
+    [apiRequest, authHeaders, optimisticUpdateList],
   );
 
   const addToWatchlist = useCallback(
-    (movieId) => updateWatchlist(movieId, "add"),
-    [updateWatchlist]
+    (movieId, type) => updateWatchlist(movieId, type, 'add'),
+    [updateWatchlist],
   );
 
   const removeFromWatchlist = useCallback(
-    (movieId) => updateWatchlist(movieId, "remove"),
-    [updateWatchlist]
+    (movieId, type) => updateWatchlist(movieId, type, 'remove'),
+    [updateWatchlist],
   );
 
   const addToFavorites = useCallback(
-    (movieId) => updateFavorites(movieId, "add"),
-    [updateFavorites]
+    (movieId, type) => updateFavorites(movieId, type, 'add'),
+    [updateFavorites],
   );
 
   const removeFromFavorites = useCallback(
-    (movieId) => updateFavorites(movieId, "remove"),
-    [updateFavorites]
+    (movieId, type) => updateFavorites(movieId, type, 'remove'),
+    [updateFavorites],
   );
 
   const value = useMemo(
@@ -239,7 +284,6 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
-      fetchMe,
       updateWatchlist,
       updateFavorites,
       addToWatchlist,
@@ -260,7 +304,6 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
-      fetchMe,
       updateWatchlist,
       updateFavorites,
       addToWatchlist,
@@ -268,7 +311,7 @@ export function AuthProvider({ children }) {
       addToFavorites,
       removeFromFavorites,
       apiRequest,
-    ]
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -277,7 +320,7 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    throw new Error("useAuth must be used within AuthProvider");
+    throw new Error('useAuth must be used within AuthProvider');
   }
   return ctx;
 }

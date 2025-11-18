@@ -1,60 +1,58 @@
-import express from "express";
-import bodyParser from "body-parser";
-import cors from "cors";
-import cookieParser from "cookie-parser";
-import mongoose from "mongoose";
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
+import express from 'express';
+import bodyParser from 'body-parser';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.join(__dirname, ".env") });
+dotenv.config({ path: path.join(__dirname, '.env') });
 
-import authRouter from "./router/authRouter.js";
-import movieListRouter from "./router/movieListRouter.js";
-import reviewRouter from "./router/reviewRouter.js";
-import userRouter from "./router/userRouter.js";
-import errorMiddleware from "./middleware/errorMiddleware.js";
+import authRouter from './router/authRouter.js';
+import userRouter from './router/userRouter.js';
+import reviewRouter from './router/reviewRouter.js';
+import errorMiddleware from './middleware/errorMiddleware.js';
 
-const app = express();
-
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const PORT = process.env.PORT || 3000;
 const URI = process.env.DB_URI;
 
 const clientOptions = {
-  maxPoolSize: 10,
-  serverSelectionTimeoutMS: 5000,
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
 };
 
-const corsOptions = {
-  origin: process.env.CLIENT_URL || "http://localhost:5173",
-  credentials: true,
-};
+const app = express();
 
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: CLIENT_URL,
+    credentials: true,
+  })
+);
 app.use(cookieParser());
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use("/api/auth", authRouter);
-app.use("/api/movies", movieListRouter);
-app.use("/api/reviews", reviewRouter);
-app.use("/api/user", userRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/user', userRouter);
+app.use('/api/reviews', reviewRouter);
 
 app.use(errorMiddleware);
 
 mongoose
   .connect(URI, clientOptions)
   .then(() => {
-    console.log("MongoDB connection established");
+    console.log('MongoDB connection established');
   })
   .catch((err) => {
-    console.error("MongoDB connection error:", err);
+    console.error('MongoDB connection error:', err);
   });
 
-if (process.env.MODE === "dev") {
+if (process.env.MODE === 'dev' || process.env.MODE === 'development') {
   app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
   });

@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import tokenModel from '../models/TokenModel.js';
 
+
 const generateTokens = (payload) => {
   const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
     expiresIn: '30m',
@@ -11,40 +12,39 @@ const generateTokens = (payload) => {
   return { accessToken, refreshToken };
 };
 
-const saveToken = async (UserID, refreshToken) => {
-  await tokenModel.deleteMany({
-    user: UserID,
-    createdAt: { $lt: new Date(Date.now() - 2592000) },
-  });
 
-  const numberOfTokens = await tokenModel.countDocuments({ user: UserID });
-  if (numberOfTokens >= 5) {
-    const oldToken = await tokenModel
-      .findOne({ user: UserID })
-      .sort({ createdAt: 1 });
-    await tokenModel.deleteOne({ _id: oldToken._id });
-  }
-  const newToken = await tokenModel.create({
-    user: UserID,
-    refreshToken,
-    createdAt: new Date(),
-  });
-  return newToken;
+const saveToken = async (userId, refreshToken, meta = {}) => {
+  await tokenModel.findOneAndUpdate(
+    { user: userId },
+    {
+      user: userId,
+      refreshToken,
+      userAgent: meta.userAgent || undefined,
+      ip: meta.ip || undefined,
+      createdAt: new Date(),
+    },
+    {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true,
+    }
+  );
 };
+
 
 const findToken = async (refreshToken) => {
-  const tokenData = await tokenModel.findOne({ refreshToken });
-  return tokenData;
+  return tokenModel.findOne({ refreshToken });
 };
 
+
 const deleteToken = async (refreshToken) => {
-  return await tokenModel.deleteOne({ refreshToken });
+  await tokenModel.deleteOne({ refreshToken });
 };
 
 const validateRefreshToken = (token) => {
   try {
     return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-  } catch (e) {
+  } catch {
     return null;
   }
 };

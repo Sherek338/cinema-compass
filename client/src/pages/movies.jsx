@@ -1,17 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
-import Header from "@/components/Header.jsx";
-import Footer from "@/components/Footer.jsx";
-import MediaCard from "@/components/MediaCard.jsx";
+import { useEffect, useMemo, useState } from 'react';
+import Header from '@/components/header.jsx';
+import Footer from '@/components/footer.jsx';
+import MediaCard from '@/components/mediacard.jsx';
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
 const IMG = (p) =>
-  p ? `https://image.tmdb.org/t/p/w500${p}` : "https://via.placeholder.com/400x600?text=No+Image";
+  p ? `https://image.tmdb.org/t/p/w500${p}` : '/placeholder.png';
 
 async function tmdb(path, params = {}) {
-  const q = new URLSearchParams({ api_key: API_KEY, language: "en-US", ...params });
-  const res = await fetch(`https://api.themoviedb.org/3${path}?${q.toString()}`);
-  if (!res.ok) throw new Error("TMDB request failed");
+  const q = new URLSearchParams({
+    api_key: API_KEY,
+    language: 'en-US',
+    ...params,
+  });
+  const res = await fetch(
+    `https://api.themoviedb.org/3${path}?${q.toString()}`
+  );
+  if (!res.ok) throw new Error('TMDB request failed');
   return res.json();
 }
 
@@ -23,16 +29,16 @@ export default function Movies() {
 
   const [genres, setGenres] = useState([]);
   const [selectedGenres, setSelectedGenres] = useState([]);
-  const [yearFrom, setYearFrom] = useState("");
-  const [yearTo, setYearTo] = useState("");
+  const [yearFrom, setYearFrom] = useState('');
+  const [yearTo, setYearTo] = useState('');
 
   useEffect(() => {
     (async () => {
       try {
-        const { genres } = await tmdb("/genre/movie/list");
+        const { genres } = await tmdb('/genre/movie/list');
         setGenres(genres || []);
       } catch (e) {
-        console.error("Failed to load genres", e);
+        console.error('Failed to load genres', e);
       }
     })();
   }, []);
@@ -45,25 +51,26 @@ export default function Movies() {
         const params = { page };
 
         if (selectedGenres.length) {
-          params.with_genres = selectedGenres.join(",");
+          params.with_genres = selectedGenres.join(',');
         }
 
-        const gte = yearFrom && /^\d{4}$/.test(yearFrom) ? `${yearFrom}-01-01` : "";
-        const lte = yearTo && /^\d{4}$/.test(yearTo) ? `${yearTo}-12-31` : "";
-        if (gte) params["primary_release_date.gte"] = gte;
-        if (lte) params["primary_release_date.lte"] = lte;
+        const gte =
+          yearFrom && /^\d{4}$/.test(yearFrom) ? `${yearFrom}-01-01` : '';
+        const lte = yearTo && /^\d{4}$/.test(yearTo) ? `${yearTo}-12-31` : '';
+        if (gte) params['primary_release_date.gte'] = gte;
+        if (lte) params['primary_release_date.lte'] = lte;
 
-        const data = await tmdb("/discover/movie", {
-          sort_by: "popularity.desc",
-          include_adult: "false",
-          include_video: "false",
+        const data = await tmdb('/discover/movie', {
+          sort_by: 'popularity.desc',
+          include_adult: 'false',
+          include_video: 'false',
           ...params,
         });
 
         setItems(data.results ?? []);
         setTotalPages(Math.min(data.total_pages ?? 1, 500));
       } catch (e) {
-        console.error("Failed to load movies", e);
+        console.error('Failed to load movies', e);
       } finally {
         setLoading(false);
       }
@@ -74,7 +81,9 @@ export default function Movies() {
 
   const toggleGenre = (id) => {
     setSelectedGenres((prev) => {
-      const next = prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id];
+      const next = prev.includes(id)
+        ? prev.filter((g) => g !== id)
+        : [...prev, id];
       return next;
     });
     setPage(1);
@@ -99,7 +108,7 @@ export default function Movies() {
     <div className="min-h-screen bg-[#201E1F] flex flex-col">
       <Header />
 
-      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] py-16">
+      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] py-16 pt-30">
         <h1 className="text-white font-bold text-[35px] mb-12">Movies</h1>
 
         <div className="flex gap-5 lg:gap-20">
@@ -111,7 +120,9 @@ export default function Movies() {
                 <h3 className="text-white text-lg font-normal">Release date</h3>
                 <div className="flex items-center gap-2.5">
                   <div className="flex items-center gap-[5px]">
-                    <span className="text-[#999] text-[15px] font-normal">from</span>
+                    <span className="text-[#999] text-[15px] font-normal">
+                      from
+                    </span>
                     <input
                       value={yearFrom}
                       onChange={(e) => setYearFrom(e.target.value)}
@@ -122,7 +133,9 @@ export default function Movies() {
                     />
                   </div>
                   <div className="flex items-center gap-[5px]">
-                    <span className="text-[#999] text-[15px] font-normal">to</span>
+                    <span className="text-[#999] text-[15px] font-normal">
+                      to
+                    </span>
                     <input
                       value={yearTo}
                       onChange={(e) => setYearTo(e.target.value)}
@@ -152,8 +165,8 @@ export default function Movies() {
                             onClick={() => toggleGenre(g.id)}
                             className={`px-2.5 py-[3px] rounded-full border text-[15px] transition ${
                               active
-                                ? "border-[#FF4002] text-[#FF4002]"
-                                : "border-[#D9D9D9] text-[#999] hover:border-[#FF4002] hover:text-[#FF4002]"
+                                ? 'border-[#FF4002] text-[#FF4002]'
+                                : 'border-[#D9D9D9] text-[#999] hover:border-[#FF4002] hover:text-[#FF4002]'
                             }`}
                           >
                             {g.name}
@@ -168,8 +181,8 @@ export default function Movies() {
                   <button
                     onClick={() => {
                       setSelectedGenres([]);
-                      setYearFrom("");
-                      setYearTo("");
+                      setYearFrom('');
+                      setYearTo('');
                       setPage(1);
                     }}
                     className="mt-2 self-start px-3 py-1 rounded bg-white/10 text-white hover:bg-white/20 text-sm"
@@ -185,7 +198,10 @@ export default function Movies() {
             {loading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
                 {Array.from({ length: 10 }).map((_, i) => (
-                  <div key={i} className="h-[273px] rounded-lg bg-white/10 animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-[273px] rounded-lg bg-white/10 animate-pulse"
+                  />
                 ))}
               </div>
             ) : items.length ? (
@@ -195,16 +211,18 @@ export default function Movies() {
                     key={m.id}
                     id={m.id}
                     title={m.title}
-                    year={(m.release_date || "").slice(0, 4)}
+                    year={(m.release_date || '').slice(0, 4)}
                     duration={null}
-                    rating={m.vote_average ? m.vote_average.toFixed(1) : "N/A"}
+                    rating={m.vote_average ? m.vote_average.toFixed(1) : 'N/A'}
                     poster={IMG(m.poster_path)}
                     type="movie"
                   />
                 ))}
               </div>
             ) : (
-              <p className="text-[#999]">No results found with these filters.</p>
+              <p className="text-[#999]">
+                No results found with these filters.
+              </p>
             )}
 
             <div className="flex flex-col items-center gap-2.5 mt-4">

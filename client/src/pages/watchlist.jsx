@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import Header from "@/components/Header.jsx";
-import Footer from "@/components/Footer.jsx";
-import { useAuth } from "@/context/authContext.jsx";
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import Header from '@/components/header.jsx';
+import Footer from '@/components/footer.jsx';
+import { useAuth } from '@/context/authContext.jsx';
 
-const TMDB_BASE = "https://api.themoviedb.org/3";
+const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 function formatRuntime(runtime) {
   if (!runtime || Number.isNaN(runtime)) return null;
@@ -15,13 +15,11 @@ function formatRuntime(runtime) {
   return `${h}h ${m}m`;
 }
 
-async function fetchOneTMDB(id, apiKey, signal) {
-  let res = await fetch(
-    `${TMDB_BASE}/movie/${id}?api_key=${apiKey}&language=en-US`,
-    { signal }
-  );
+async function fetchOneTMDB(id, type, apiKey, signal) {
+  const url = `${TMDB_BASE}/${type === 'movie' ? 'movie' : 'tv'}/${id}?api_key=${apiKey}&language=en-US`;
+  let res = await fetch(url, { signal });
 
-  let mediaType = "movie";
+  let mediaType = 'movie';
 
   if (!res.ok) {
     res = await fetch(
@@ -29,41 +27,52 @@ async function fetchOneTMDB(id, apiKey, signal) {
       { signal }
     );
     if (!res.ok) return null;
-    mediaType = "tv";
+    mediaType = 'tv';
   }
 
   const data = await res.json();
 
-  const isSeries = mediaType === "tv";
+  const isSeries = type === 'series';
   const seasons =
-    isSeries && typeof data.number_of_seasons === "number"
+    isSeries && typeof data.number_of_seasons === 'number'
       ? `${data.number_of_seasons} season${
-          data.number_of_seasons === 1 ? "" : "s"
-        }`
+        data.number_of_seasons === 1 ? '' : 's'
+      }`
       : null;
 
   const duration =
-    !isSeries && typeof data.runtime === "number"
+    !isSeries && typeof data.runtime === 'number'
       ? formatRuntime(data.runtime)
       : null;
 
   return {
     id: data.id,
-    title: data.title || data.name || "Untitled",
-    year: (data.release_date || data.first_air_date || "").slice(0, 4),
+    title: data.title || data.name || 'Untitled',
+    year: (data.release_date || data.first_air_date || '').slice(0, 4),
     rating:
-      typeof data.vote_average === "number"
-        ? data.vote_average.toFixed(1)
+      typeof data.vote_average === 'number'
+        ? data.vote_average.toFixed(1) === '0.0'
+          ? 'N/A'
+          : data.vote_average.toFixed(1)
         : null,
     poster: data.poster_path
       ? `https://image.tmdb.org/t/p/w342${data.poster_path}`
-      : "https://via.placeholder.com/342x513?text=No+Image",
+      : '/placeholder.png',
     isSeries,
     meta: seasons || duration || null,
   };
 }
 
-function ListCard({ id, title, year, meta, rating, poster, isSeries, onRemove }) {
+function ListCard({
+                    id,
+                    title,
+                    year,
+                    meta,
+                    rating,
+                    poster,
+                    isSeries,
+                    onRemove,
+                  }) {
   const detailPath = isSeries ? `/series/${id}` : `/movies/${id}`;
 
   return (
@@ -79,7 +88,7 @@ function ListCard({ id, title, year, meta, rating, poster, isSeries, onRemove })
       {onRemove && (
         <button
           onClick={onRemove}
-          className="absolute top-2 right-2 text-xs px-2 py-1 bg-black/70 rounded hover:bg-black/90 transition"
+          className="absolute top-2 right-2 text-xs px-2 py-1 bg-black/70 rounded hover:bg-black/90 transition cursor-pointer z-10"
         >
           Remove
         </button>
@@ -96,16 +105,16 @@ function ListCard({ id, title, year, meta, rating, poster, isSeries, onRemove })
           {meta && (
             <>
               <span>•</span>
-              <span className="truncate">{meta}</span>
+              <span>{meta.length > 6 ? meta.slice(0, 6) + '...' : meta}</span>
             </>
           )}
           {rating && (
             <>
               <span>•</span>
-              <div className="flex items-end gap-1">
+              <div className="flex items-center gap-1">
                 <svg
-                  width="19"
-                  height="19"
+                  width="13"
+                  height="13"
                   viewBox="0 0 19 19"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
@@ -131,7 +140,7 @@ export default function Watchlist() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("movies");
+  const [activeTab, setActiveTab] = useState('movies');
 
   const TMDB_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
@@ -146,6 +155,7 @@ export default function Watchlist() {
 
         if (!isAuthenticated) {
           setItems([]);
+          setLoading(false);
           return;
         }
 
@@ -155,8 +165,8 @@ export default function Watchlist() {
         }
 
         const results = await Promise.all(
-          watchList.map((id) =>
-            fetchOneTMDB(id, TMDB_KEY, controller.signal)
+          watchList.map((item) =>
+            fetchOneTMDB(item.id, item.type, TMDB_KEY, controller.signal)
           )
         );
 
@@ -165,10 +175,12 @@ export default function Watchlist() {
         setItems(results.filter(Boolean));
       } catch (err) {
         if (cancelled) return;
-        console.error("Failed to load watchlist", err);
-        setError("Failed to load watchlist.");
+        console.error('Failed to load watchlist', err);
+        setError('Failed to load watchlist.');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
@@ -182,52 +194,53 @@ export default function Watchlist() {
 
   const handleRemove = async (id) => {
     try {
-      await removeFromWatchlist(id);
+      const type = activeTab === 'movies' ? 'movie' : 'series';
+      await removeFromWatchlist(id, type);
       setItems((prev) => prev.filter((m) => m.id !== id));
     } catch (err) {
-      console.error("Failed to remove from watchlist", err);
+      console.error('Failed to remove from watchlist', err);
     }
   };
 
   const movies = items.filter((m) => !m.isSeries);
   const series = items.filter((m) => m.isSeries);
-  const visibleItems = activeTab === "movies" ? movies : series;
+  const visibleItems = activeTab === 'movies' ? movies : series;
 
   return (
     <div className="min-h-screen bg-[#201E1F] flex flex-col">
       <Header />
 
-      <main className="flex-1 max-w-7xl mx-auto px-8 lg:px-16 py-12 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-8 lg:px-16 py-12 w-full pt-30">
         <h1 className="text-white font-bold text-[35px] mb-16">My Watchlist</h1>
 
         <div className="flex items-start gap-9 justify-center mb-16">
           <div className="flex flex-col items-center gap-1">
             <button
-              onClick={() => setActiveTab("movies")}
+              onClick={() => setActiveTab('movies')}
               className={`text-[25px] transition ${
-                activeTab === "movies"
-                  ? "text-white font-bold"
-                  : "text-white font-normal"
+                activeTab === 'movies'
+                  ? 'text-white font-bold'
+                  : 'text-white font-normal cursor-pointer'
               }`}
             >
               Movies
             </button>
-            {activeTab === "movies" && (
+            {activeTab === 'movies' && (
               <div className="w-[75px] h-0.5 bg-[#FF4002]"></div>
             )}
           </div>
           <div className="flex flex-col items-center gap-1">
             <button
-              onClick={() => setActiveTab("series")}
+              onClick={() => setActiveTab('series')}
               className={`text-[25px] transition ${
-                activeTab === "series"
-                  ? "text-white font-bold"
-                  : "text-white font-normal"
+                activeTab === 'series'
+                  ? 'text-white font-bold'
+                  : 'text-white font-normal cursor-pointer'
               }`}
             >
               Series
             </button>
-            {activeTab === "series" && (
+            {activeTab === 'series' && (
               <div className="w-[75px] h-0.5 bg-[#FF4002]"></div>
             )}
           </div>
@@ -251,7 +264,7 @@ export default function Watchlist() {
 
         {!loading && isAuthenticated && visibleItems.length === 0 && (
           <p className="text-sm text-gray-200 mb-16 text-center">
-            No {activeTab === "movies" ? "movies" : "series"} in your watchlist
+            No {activeTab === 'movies' ? 'movies' : 'series'} in your watchlist
             yet.
           </p>
         )}

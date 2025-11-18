@@ -1,17 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
-import Header from "@/components/Header.jsx";
-import Footer from "@/components/Footer.jsx";
-import MediaCard from "@/components/MediaCard.jsx";
+import { useEffect, useMemo, useState } from 'react';
+import Header from '@/components/header.jsx';
+import Footer from '@/components/footer.jsx';
+import MediaCard from '@/components/mediacard.jsx';
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
 const IMG = (p) =>
-  p ? `https://image.tmdb.org/t/p/w500${p}` : "https://via.placeholder.com/400x600?text=No+Image";
+  p ? `https://image.tmdb.org/t/p/w500${p}` : '/placeholder.png';
 
 async function tmdb(path, params = {}) {
-  const q = new URLSearchParams({ api_key: API_KEY, language: "en-US", ...params });
-  const res = await fetch(`https://api.themoviedb.org/3${path}?${q.toString()}`);
-  if (!res.ok) throw new Error("TMDB request failed");
+  const q = new URLSearchParams({
+    api_key: API_KEY,
+    language: 'en-US',
+    ...params,
+  });
+  const res = await fetch(
+    `https://api.themoviedb.org/3${path}?${q.toString()}`
+  );
+  if (!res.ok) throw new Error('TMDB request failed');
   return res.json();
 }
 
@@ -23,16 +29,16 @@ export default function Series() {
 
   const [genres, setGenres] = useState([]);
   const [selectedGenres, setSelectedGenres] = useState([]);
-  const [yearFrom, setYearFrom] = useState("");
-  const [yearTo, setYearTo] = useState("");
+  const [yearFrom, setYearFrom] = useState('');
+  const [yearTo, setYearTo] = useState('');
 
   useEffect(() => {
     (async () => {
       try {
-        const { genres } = await tmdb("/genre/tv/list");
+        const { genres } = await tmdb('/genre/tv/list');
         setGenres(genres || []);
       } catch (e) {
-        console.error("Failed to load TV genres", e);
+        console.error('Failed to load TV genres', e);
       }
     })();
   }, []);
@@ -45,18 +51,19 @@ export default function Series() {
         const params = { page };
 
         if (selectedGenres.length) {
-          params.with_genres = selectedGenres.join(",");
+          params.with_genres = selectedGenres.join(',');
         }
 
-        const gte = yearFrom && /^\d{4}$/.test(yearFrom) ? `${yearFrom}-01-01` : "";
-        const lte = yearTo && /^\d{4}$/.test(yearTo) ? `${yearTo}-12-31` : "";
-        if (gte) params["first_air_date.gte"] = gte;
-        if (lte) params["first_air_date.lte"] = lte;
+        const gte =
+          yearFrom && /^\d{4}$/.test(yearFrom) ? `${yearFrom}-01-01` : '';
+        const lte = yearTo && /^\d{4}$/.test(yearTo) ? `${yearTo}-12-31` : '';
+        if (gte) params['first_air_date.gte'] = gte;
+        if (lte) params['first_air_date.lte'] = lte;
 
-        const data = await tmdb("/discover/tv", {
-          sort_by: "popularity.desc",
-          include_adult: "false",
-          include_null_first_air_dates: "false",
+        const data = await tmdb('/discover/tv', {
+          sort_by: 'popularity.desc',
+          include_adult: 'false',
+          include_null_first_air_dates: 'false',
           ...params,
         });
 
@@ -67,7 +74,7 @@ export default function Series() {
         setItems(cleaned);
         setTotalPages(Math.min(data.total_pages ?? 1, 500));
       } catch (e) {
-        console.error("Failed to load series", e);
+        console.error('Failed to load series', e);
       } finally {
         setLoading(false);
       }
@@ -78,7 +85,9 @@ export default function Series() {
 
   const toggleGenre = (id) => {
     setSelectedGenres((prev) => {
-      const next = prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id];
+      const next = prev.includes(id)
+        ? prev.filter((g) => g !== id)
+        : [...prev, id];
       return next;
     });
     setPage(1);
@@ -103,7 +112,7 @@ export default function Series() {
     <div className="min-h-screen bg-[#201E1F] flex flex-col">
       <Header />
 
-      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] py-16">
+      <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-[70px] py-16 pt-30">
         <h1 className="text-white font-bold text-[35px] mb-12">Series</h1>
 
         <div className="flex gap-5 lg:gap-20">
@@ -112,10 +121,14 @@ export default function Series() {
               <h2 className="text-white font-bold text-xl">Filters</h2>
 
               <div className="flex flex-col gap-2.5">
-                <h3 className="text-white text-lg font-normal">First air date</h3>
+                <h3 className="text-white text-lg font-normal">
+                  First air date
+                </h3>
                 <div className="flex items-center gap-2.5">
                   <div className="flex items-center gap-[5px]">
-                    <span className="text-[#999] text-[15px] font-normal">from</span>
+                    <span className="text-[#999] text-[15px] font-normal">
+                      from
+                    </span>
                     <input
                       value={yearFrom}
                       onChange={(e) => setYearFrom(e.target.value)}
@@ -126,7 +139,9 @@ export default function Series() {
                     />
                   </div>
                   <div className="flex items-center gap-[5px]">
-                    <span className="text-[#999] text-[15px] font-normal">to</span>
+                    <span className="text-[#999] text-[15px] font-normal">
+                      to
+                    </span>
                     <input
                       value={yearTo}
                       onChange={(e) => setYearTo(e.target.value)}
@@ -156,8 +171,8 @@ export default function Series() {
                             onClick={() => toggleGenre(g.id)}
                             className={`px-2.5 py-[3px] rounded-full border text-[15px] transition ${
                               active
-                                ? "border-[#FF4002] text-[#FF4002]"
-                                : "border-[#D9D9D9] text-[#999] hover:border-[#FF4002] hover:text-[#FF4002]"
+                                ? 'border-[#FF4002] text-[#FF4002]'
+                                : 'border-[#D9D9D9] text-[#999] hover:border-[#FF4002] hover:text-[#FF4002]'
                             }`}
                           >
                             {g.name}
@@ -172,8 +187,8 @@ export default function Series() {
                   <button
                     onClick={() => {
                       setSelectedGenres([]);
-                      setYearFrom("");
-                      setYearTo("");
+                      setYearFrom('');
+                      setYearTo('');
                       setPage(1);
                     }}
                     className="mt-2 self-start px-3 py-1 rounded bg-white/10 text-white hover:bg.white/20 text-sm"
@@ -189,7 +204,10 @@ export default function Series() {
             {loading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
                 {Array.from({ length: 10 }).map((_, i) => (
-                  <div key={i} className="h-[273px] rounded-lg bg.white/10 animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-[273px] rounded-lg bg.white/10 animate-pulse"
+                  />
                 ))}
               </div>
             ) : items.length ? (
@@ -199,16 +217,19 @@ export default function Series() {
                     key={s.id}
                     id={s.id}
                     title={s.name}
-                    year={(s.first_air_date || "").slice(0, 4)}
+                    year={(s.first_air_date || '').slice(0, 4)}
                     duration={null}
-                    rating={s.vote_average ? s.vote_average.toFixed(1) : "N/A"}
+                    rating={s.vote_average ? s.vote_average.toFixed(1) : 'N/A'}
                     poster={IMG(s.poster_path)}
                     type="series"
+                    isSeries={true}
                   />
                 ))}
               </div>
             ) : (
-              <p className="text-[#999]">No results found with these filters.</p>
+              <p className="text-[#999]">
+                No results found with these filters.
+              </p>
             )}
 
             <div className="flex flex-col items-center gap-2.5 mt-4">

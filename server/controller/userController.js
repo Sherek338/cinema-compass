@@ -1,64 +1,96 @@
-import UserModel from "../models/UserModel.js";
-import ApiError from "../exceptions/ApiError.js";
+import userService from '../services/userService.js';
 
-export const getUserLists = async (req, res, next) => {
+const getFavorites = async (req, res, next) => {
   try {
-    const user = await UserModel.findById(req.user.id)
-      .select("favoriteList watchList")
-      .lean();
-    if (!user) throw ApiError.NotFound("User not found");
+    const userId = req.user.id;
+    const favorites = await userService.getFavorites(userId);
 
-    res.status(200).json({
-      favoriteList: user.favoriteList || [],
-      watchList: user.watchList || [],
-    });
+    return res.status(200).json(favorites);
   } catch (e) {
     next(e);
   }
 };
 
-export const updateWatchlist = async (req, res, next) => {
+const updateFavorite = async (req, res, next) => {
   try {
-    const { movieId, action } = req.body;
-    if (!movieId || !["add", "remove"].includes(action)) {
-      throw ApiError.BadRequest("movieId and valid action are required");
+    const { action, id, type } = req.body;
+    const userId = req.user.id;
+
+    if (!['add', 'remove'].includes(action)) {
+      return res.status(400).json({ message: 'Invalid action' });
+    }
+    if (id == null || !['movie', 'series'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid id or type' });
     }
 
-    const user = await UserModel.findById(req.user.id);
-    if (!user) throw ApiError.NotFound("User not found");
+    const newItem = {
+      id: Number(id),
+      type,
+    };
 
-    if (action === "add" && !user.watchList.includes(movieId)) {
-      user.watchList.push(movieId);
-    } else if (action === "remove") {
-      user.watchList = user.watchList.filter((id) => id !== movieId);
+    if (action === 'add') {
+      const favorites = await userService.addFavorite(userId, newItem);
+      return res
+        .status(201)
+        .json({ message: 'Movie added to favorites', favorites });
     }
 
-    await user.save();
-    res.status(200).json({ watchList: user.watchList });
+    const favorites = await userService.deleteFavorite(userId, newItem);
+    return res
+      .status(200)
+      .json({ message: 'Movie removed from favorites', favorites });
   } catch (e) {
     next(e);
   }
 };
 
-export const updateFavorites = async (req, res, next) => {
+const getWatchlist = async (req, res, next) => {
   try {
-    const { movieId, action } = req.body;
-    if (!movieId || !["add", "remove"].includes(action)) {
-      throw ApiError.BadRequest("movieId and valid action are required");
-    }
+    const userId = req.user.id;
+    const watchList = await userService.getWatchlist(userId);
 
-    const user = await UserModel.findById(req.user.id);
-    if (!user) throw ApiError.NotFound("User not found");
-
-    if (action === "add" && !user.favoriteList.includes(movieId)) {
-      user.favoriteList.push(movieId);
-    } else if (action === "remove") {
-      user.favoriteList = user.favoriteList.filter((id) => id !== movieId);
-    }
-
-    await user.save();
-    res.status(200).json({ favoriteList: user.favoriteList });
+    return res.status(200).json(watchList);
   } catch (e) {
     next(e);
   }
+};
+
+const updateWatchlist = async (req, res, next) => {
+  try {
+    const { action, id, type } = req.body;
+    const userId = req.user.id;
+
+    if (!['add', 'remove'].includes(action)) {
+      return res.status(400).json({ message: 'Invalid action' });
+    }
+    if (id == null || !['movie', 'series'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid id or type' });
+    }
+
+    const newItem = {
+      id: Number(id),
+      type,
+    };
+
+    if (action === 'add') {
+      const watchList = await userService.addWatchlist(userId, newItem);
+      return res
+        .status(201)
+        .json({ message: 'Movie added to watchlist', watchList });
+    }
+
+    const watchList = await userService.deleteWatchlist(userId, newItem);
+    return res
+      .status(200)
+      .json({ message: 'Movie removed from watchlist', watchList });
+  } catch (e) {
+    next(e);
+  }
+};
+
+export default {
+  getFavorites,
+  updateFavorite,
+  getWatchlist,
+  updateWatchlist,
 };

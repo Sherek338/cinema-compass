@@ -1,16 +1,15 @@
-import { Link } from "react-router-dom";
+import { Link } from 'react-router-dom';
 
 export default function MediaCard({
-  id,
-  title,
-  year,
-  rating,
-  poster,
-  isSeries = false,
-}) {
+                                    id,
+                                    title,
+                                    year,
+                                    rating,
+                                    poster,
+                                    isSeries = false,
+                                  }) {
   const detailPath = isSeries ? `/series/${id}` : `/movies/${id}`;
-  const numericRating =
-    rating && rating !== "N/A" ? rating : null;
+  const numericRating = rating && rating !== 'N/A' ? rating : null;
 
   return (
     <div className="flex-shrink-0 w-[140px] sm:w-[150px] md:w-[170px] lg:w-[180px]">
