@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/header.jsx';
 import Footer from '@/components/footer.jsx';
 import { useAuth } from '@/context/authContext.jsx';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
 const TMDB_BASE = 'https://api.themoviedb.org/3';
+const MAX_FIRST_ROW = 3;
 
 function formatRuntime(runtime) {
   if (!runtime || Number.isNaN(runtime)) return null;
@@ -18,26 +20,19 @@ function formatRuntime(runtime) {
 async function fetchOneTMDB(id, type, apiKey, signal) {
   const url = `${TMDB_BASE}/${type === 'movie' ? 'movie' : 'tv'}/${id}?api_key=${apiKey}&language=en-US`;
   let res = await fetch(url, { signal });
-
-  let mediaType = 'movie';
-
   if (!res.ok) {
     res = await fetch(
       `${TMDB_BASE}/tv/${id}?api_key=${apiKey}&language=en-US`,
       { signal }
     );
     if (!res.ok) return null;
-    mediaType = 'tv';
   }
-
   const data = await res.json();
-
   const isSeries = type === 'series';
+
   const seasons =
     isSeries && typeof data.number_of_seasons === 'number'
-      ? `${data.number_of_seasons} season${
-          data.number_of_seasons === 1 ? '' : 's'
-        }`
+      ? `${data.number_of_seasons} season${data.number_of_seasons === 1 ? '' : 's'}`
       : null;
 
   const duration =
@@ -86,7 +81,7 @@ function ProfileMovieCard({ id, title, year, rating, poster, isSeries, meta }) {
           {meta && (
             <>
               <span>•</span>
-              <span>{meta.length > 6 ? meta.slice(0, 6) + '...' : meta}</span>
+              <span>{meta.length > 6 ? `${meta.slice(0, 6)}...` : meta}</span>
             </>
           )}
           {rating && (
@@ -115,12 +110,96 @@ function ProfileMovieCard({ id, title, year, rating, poster, isSeries, meta }) {
   );
 }
 
+function UserReviewCard({
+  review,
+  displayName,
+  onEdit,
+  onDelete,
+  deleting,
+  stars,
+  formatReviewDate,
+  getReviewExcerpt,
+}) {
+  return (
+    <div className="w-full max-w-[310px] bg-coquelicot rounded-[20px] p-5">
+      <div className="mb-6">
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <h3 className="text-white text-[20px] font-semibold mb-1">
+              {displayName}
+            </h3>
+            <div className="flex items-center gap-1.5 text-white text-xs">
+              <span className="font-semibold">Posted on:</span>
+              <span className="font-normal">
+                {formatReviewDate(review.createdAt)}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <svg
+                key={i}
+                width="19"
+                height="19"
+                viewBox="0 0 19 19"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M16.346 8.95142C16.9889 8.37204 16.6422 7.30502 15.7815 7.21413L12.5461 6.87245C12.1912 6.83497 11.8832 6.61116 11.7378 6.28519L10.4136 3.31494C10.0612 2.52454 8.9393 2.52454 8.58691 3.31494L7.26266 6.28519C7.11732 6.61116 6.80927 6.83497 6.45434 6.87245L3.21894 7.21413C2.35832 7.30502 2.01163 8.37204 2.65447 8.95142L5.07101 11.1294C5.33613 11.3684 5.4538 11.7305 5.37978 12.0796L4.70524 15.261C4.52574 16.1076 5.43341 16.7671 6.18308 16.3347L9.00065 14.7098C9.30985 14.5314 9.69064 14.5314 9.99983 14.7098L12.8174 16.3347C13.5671 16.7671 14.4747 16.1076 14.2952 15.261L13.6207 12.0796C13.5467 11.7305 13.6644 11.3684 13.9295 11.1294L16.346 8.95142Z"
+                  fill={i < stars ? '#F5C519' : '#CACACA'}
+                />
+              </svg>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative">
+          <p className="text-white text-[15px] font-normal leading-relaxed text-justify">
+            {getReviewExcerpt(review.review, 200)}
+            {review.review && review.review.length > 200 && (
+              <span className="text-white/80 text-[13px] font-semibold ml-1">
+                ...Read more
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onEdit}
+          className="text-white text-[15px] font-bold italic hover:opacity-80 transition-opacity"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          className="text-white text-[15px] font-bold italic hover:opacity-80 transition-opacity disabled:opacity-50"
+        >
+          {deleting ? 'Deleting...' : 'Delete'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
-  const { isAuthenticated, user, favoriteList, watchList } = useAuth();
+  const { isAuthenticated, user, favoriteList, watchList, authHeaders } =
+    useAuth();
+  const navigate = useNavigate();
 
   const [favorites, setFavorites] = useState([]);
   const [watchlist, setWatchlist] = useState([]);
   const [loadingLists, setLoadingLists] = useState(true);
+
+  const [myReviews, setMyReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+  const [deletingReviewId, setDeletingReviewId] = useState(null);
 
   const TMDB_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
@@ -180,11 +259,120 @@ export default function Profile() {
     };
   }, [isAuthenticated, favoriteList, watchList, TMDB_KEY]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadReviews = async () => {
+      try {
+        setLoadingReviews(true);
+
+        if (!isAuthenticated) {
+          setMyReviews([]);
+          return;
+        }
+
+        const res = await fetch(`${API_URL}/api/reviews/user`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { ...authHeaders },
+        });
+
+        if (!res.ok) {
+          console.error('Failed to fetch user reviews', res.status);
+          setMyReviews([]);
+          return;
+        }
+
+        const data = await res.json();
+        let list = Array.isArray(data) ? data : data?.reviews || [];
+        list = list.filter(Boolean);
+
+        list.sort((a, b) => {
+          const da = a.createdAt || 0;
+          const db = b.createdAt || 0;
+          return new Date(db) - new Date(da);
+        });
+
+        if (!cancelled) {
+          setMyReviews(list);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Failed to load user reviews', err);
+        setMyReviews([]);
+      } finally {
+        if (!cancelled) setLoadingReviews(false);
+      }
+    };
+
+    loadReviews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, authHeaders]);
+
   const displayName =
     user?.username || (user?.email ? user.email.split('@')[0] : 'User');
 
   const hasFavorites = favorites.length > 0;
   const hasWatchlist = watchlist.length > 0;
+  const hasReviews = myReviews.length > 0;
+
+  const formatReviewDate = (raw) => {
+    if (!raw) return 'Unknown date';
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return 'Unknown date';
+    return d.toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  const getReviewExcerpt = (text, max = 200) => {
+    if (!text) return '';
+    if (text.length <= max) return text;
+    return `${text.slice(0, max).trim()}...`;
+  };
+
+  const starsForRating = (rating) => {
+    const r = typeof rating === 'number' ? rating : Number(rating) || 0;
+    return Math.max(0, Math.min(5, Math.round(r)));
+  };
+
+  const handleEditReview = (review) => {
+    if (!review || typeof review.movieId === 'undefined') return;
+    const id = review.movieId;
+    const path = review.isSeries ? `/series/${id}` : `/movies/${id}`;
+    navigate(path);
+  };
+
+  const handleDeleteReview = async (review) => {
+    if (!review || !review.id || deletingReviewId) return;
+
+    try {
+      setDeletingReviewId(review.id);
+
+      const res = await fetch(`${API_URL}/api/reviews/${review.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { ...authHeaders },
+      });
+
+      if (!res.ok && res.status !== 204) {
+        console.error('Failed to delete review', res.status);
+      }
+
+      setMyReviews((prev) => prev.filter((r) => r.id !== review.id));
+    } catch (err) {
+      console.error('Failed to delete review', err);
+    } finally {
+      setDeletingReviewId(null);
+    }
+  };
+
+  const firstRowReviews = hasReviews ? myReviews.slice(0, MAX_FIRST_ROW) : [];
 
   return (
     <div className="min-h-screen bg-raisin-black">
@@ -224,7 +412,10 @@ export default function Profile() {
               </svg>
             </div>
             <h2 className="text-white text-xl md:text-[25px] font-normal">
-              {isAuthenticated ? displayName : 'Guest'}
+              {isAuthenticated
+                ? user?.username ||
+                  (user?.email ? user.email.split('@')[0] : 'User')
+                : 'Guest'}
             </h2>
           </div>
 
@@ -247,7 +438,7 @@ export default function Profile() {
               <p className="text-sm text-gray-200">
                 Please sign in to see your favourites.
               </p>
-            ) : !hasFavorites ? (
+            ) : favorites.length === 0 ? (
               <p className="text-sm text-gray-200">
                 You do not have any favourites yet.
               </p>
@@ -288,7 +479,7 @@ export default function Profile() {
               <p className="text-sm text-gray-200">
                 Please sign in to see your watchlist.
               </p>
-            ) : !hasWatchlist ? (
+            ) : watchlist.length === 0 ? (
               <p className="text-sm text-gray-200">
                 You do not have anything in your watchlist yet.
               </p>
@@ -315,76 +506,46 @@ export default function Profile() {
               <h2 className="text-white text-2xl md:text-[30px] font-bold">
                 My Reviews
               </h2>
-              <button className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors">
-                View all
-              </button>
+              {hasReviews && (
+                <Link
+                  to="/my-reviews"
+                  className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors"
+                >
+                  View all
+                </Link>
+              )}
             </div>
 
-            <div className="w-full max-w-[310px] bg-coquelicot rounded-[20px] p-5">
-              <div className="mb-6">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="text-white text-[20px] font-semibold mb-1">
-                      {isAuthenticated ? displayName : 'User'}
-                    </h3>
-                    <div className="flex items-center gap-1.5 text-white text-xs">
-                      <span className="font-semibold">Posted on:</span>
-                      <span className="font-normal">11 Jul 2025</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-0.5">
-                    {[...Array(4)].map((_, i) => (
-                      <svg
-                        key={i}
-                        width="19"
-                        height="19"
-                        viewBox="0 0 19 19"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M16.346 8.95142C16.9889 8.37204 16.6422 7.30502 15.7815 7.21413L12.5461 6.87245C12.1912 6.83497 11.8832 6.61116 11.7378 6.28519L10.4136 3.31494C10.0612 2.52454 8.9393 2.52454 8.58691 3.31494L7.26266 6.28519C7.11732 6.61116 6.80927 6.83497 6.45434 6.87245L3.21894 7.21413C2.35832 7.30502 2.01163 8.37204 2.65447 8.95142L5.07101 11.1294C5.33613 11.3684 5.4538 11.7305 5.37978 12.0796L4.70524 15.261C4.52574 16.1076 5.43341 16.7671 6.18308 16.3347L9.00065 14.7098C9.30985 14.5314 9.69064 14.5314 9.99983 14.7098L12.8174 16.3347C13.5671 16.7671 14.4747 16.1076 14.2952 15.261L13.6207 12.0796C13.5467 11.7305 13.6644 11.3684 13.9295 11.1294L16.346 8.95142Z"
-                          fill="#F5C519"
-                        />
-                      </svg>
-                    ))}
-                    <svg
-                      width="19"
-                      height="19"
-                      viewBox="0 0 19 19"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M16.346 8.95142C16.9889 8.37204 16.6422 7.30502 15.7815 7.21413L12.5461 6.87245C12.1912 6.83497 11.8832 6.61116 11.7378 6.28519L10.4136 3.31494C10.0612 2.52454 8.9393 2.52454 8.58691 3.31494L7.26266 6.28519C7.11732 6.61116 6.80927 6.83497 6.45434 6.87245L3.21894 7.21413C2.35832 7.30502 2.01163 8.37204 2.65447 8.95142L5.07101 11.1294C5.33613 11.3684 5.4538 11.7305 5.37978 12.0796L4.70524 15.261C4.52574 16.1076 5.43341 16.7671 6.18308 16.3347L9.00065 14.7098C9.30985 14.5314 9.69064 14.5314 9.99983 14.7098L12.8174 16.3347C13.5671 16.7671 14.4747 16.1076 14.2952 15.261L13.6207 12.0796C13.5467 11.7305 13.6644 11.3684 13.9295 11.1294L16.346 8.95142Z"
-                        fill="#CACACA"
-                      />
-                    </svg>
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <p className="text-white text-[15px] font-normal leading-relaxed text-justify">
-                    "Just a fun time watching this iteration of Superman. David
-                    Corenswet and Rachel Brosnahan were absolutely wonderful
-                    together and Nicholas Hoult played a great Lex Luthor.
-                    <span className="text-white/80 text-[13px] font-semibold ml-1">
-                      ...Read more
-                    </span>
-                  </p>
-                </div>
+            {!isAuthenticated ? (
+              <p className="text-sm text-gray-200">
+                Please sign in to see your reviews.
+              </p>
+            ) : loadingReviews ? (
+              <p className="text-sm text-gray-200">Loading reviews...</p>
+            ) : !hasReviews ? (
+              <p className="text-sm text-gray-200">
+                You have not written any reviews yet.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-4">
+                {firstRowReviews.map((review) => (
+                  <UserReviewCard
+                    key={review.id}
+                    review={review}
+                    displayName={
+                      user?.username ||
+                      (user?.email ? user.email.split('@')[0] : 'User')
+                    }
+                    stars={starsForRating(review.rating)}
+                    onEdit={() => handleEditReview(review)}
+                    onDelete={() => handleDeleteReview(review)}
+                    deleting={deletingReviewId === review.id}
+                    formatReviewDate={formatReviewDate}
+                    getReviewExcerpt={getReviewExcerpt}
+                  />
+                ))}
               </div>
-
-              <div className="flex items-center justify-between">
-                <button className="text-white text-[15px] font-bold italic hover:opacity-80 transition-opacity">
-                  Edit
-                </button>
-                <button className="text-white text-[15px] font-bold italic hover:opacity-80 transition-opacity">
-                  Delete
-                </button>
-              </div>
-            </div>
+            )}
           </section>
         </div>
       </main>

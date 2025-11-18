@@ -13,6 +13,7 @@ import Watchlist from '@/pages/watchlist.jsx';
 import Favorites from '@/pages/favorites.jsx';
 import SearchResults from '@/pages/searchresults.jsx';
 import ActivateAccount from '@/pages/activate.jsx';
+import MyReviews from '@/components/MyReviews.jsx';
 
 import AuthModal from '@/components/authmodal.jsx';
 import ProtectedRoute from '@/components/ProtectedRoute.jsx';
@@ -66,6 +67,16 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/my-reviews" element={<MyReviews />} />
 
         <Route
           path="/profile"

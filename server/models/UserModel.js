@@ -1,5 +1,13 @@
 import { Schema, model } from 'mongoose';
 
+const MediaRefSchema = new Schema(
+  {
+    id: { type: Number, required: true },
+    type: { type: String, enum: ['movie', 'series'], required: true },
+  },
+  { _id: false }
+);
+
 const UserSchema = new Schema(
   {
     email: {
@@ -13,6 +21,7 @@ const UserSchema = new Schema(
     password: { type: String, required: true },
     activationLink: { type: String, index: true },
     isActivated: { type: Boolean, default: false, index: true },
+    isAdmin: { type: Boolean, default: false },
     favoriteList: [
       {
         id: { type: Number, required: true },
