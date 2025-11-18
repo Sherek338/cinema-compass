@@ -13,8 +13,18 @@ const UserSchema = new Schema(
     password: { type: String, required: true },
     activationLink: { type: String, index: true },
     isActivated: { type: Boolean, default: false, index: true },
-    favoriteList: { type: [Number], default: [] },
-    watchList: { type: [Number], default: [] },
+    favoriteList: [
+      {
+        id: { type: Number, required: true },
+        type: { type: String, enum: ['movie', 'series'], required: true },
+      },
+    ],
+    watchList: [
+      {
+        id: { type: Number, required: true },
+        type: { type: String, enum: ['movie', 'series'], required: true },
+      },
+    ],
   },
   {
     timestamps: true,

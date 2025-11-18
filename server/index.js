@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import authRouter from './router/authRouter.js';
-import movieListRouter from './router/movieListRouter.js';
+import movieListRouter from './router/userRouter.js';
 import reviewRouter from './router/reviewRouter.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
 
@@ -20,7 +20,7 @@ const corsOptions = {
   origin: process.env.CLIENT_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   preflightContinue: false,
   optionsSuccessStatus: 204,
 };
@@ -30,9 +30,10 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 app.use('/api/auth', authRouter);
-app.use('/api/movielist', movieListRouter);
+app.use('/api/user', movieListRouter);
 app.use('/api/review', reviewRouter);
 
 app.use(errorMiddleware);

@@ -1,148 +1,323 @@
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/context/authContext.jsx';
+import { Heart } from 'lucide-react';
 
-const featuredShows = [
-  {
-    title: "Stranger Things",
-    image: "https://i.pinimg.com/originals/6c/c7/7d/6cc77d46badffd1480a67a87fc568f12.jpg",
-    genres: ["Horror", "Fantasy", "Retro"],
-    rating: "18+",
-    info: "4 seasons",
-    score: "8.4",
-  },
-  {
-    title: "Superman",
-    image: "https://image.tmdb.org/t/p/original/qbvBtTXQ5Igkld1QEZqYg1DRjZk.jpg",
-    genres: ["Action", "Superhero", "Drama"],
-    rating: "12+",
-    info: "1 movie",
-    score: "7.2",
-  },
-  {
-    title: "Weapons",
-    image: "https://www.heavenofhorror.com/wp-content/uploads/2025/08/Weapons-2025-horror-movie-review.jpg",
-    genres: ["Action", "Thriller", "Drama"],
-    rating: "16+",
-    info: "2h 8m",
-    score: "6.8",
-  },
-  {
-    title: "How to Train Your Dragon",
-    image: "https://film-authority.com/wp-content/uploads/2025/06/02-httyd-dm-banner-1900x660-kr-f01-021125-67ac99e0cf3df-1.webp",
-    genres: ["Animation", "Adventure", "Fantasy"],
-    rating: "PG",
-    info: "2h 5m",
-    score: "7.8",
-  },
-  {
-    title: "F1",
-    image: "https://image.tmdb.org/t/p/original/lkDYN0whyE82mcM20rwtwjbniKF.jpg",
-    genres: ["Documentary", "Sports", "Drama"],
-    rating: "PG",
-    info: "2h 36m",
-    score: "7.8",
-  },
-  {
-    title: "Mantis",
-    image: "https://images.lifestyleasia.com/wp-content/uploads/sites/3/2025/09/30103505/untitled-design-2025-09-26t170859-776-1600x900.jpeg",
-    genres: ["Action", "Adventure", "Comedy"],
-    rating: "12+",
-    info: "1h 53m",
-    score: "5.4",
-  },
-];
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { EffectFade, Navigation } from 'swiper/modules';
 
-export function Hero() {
-  const [currentIndex, setCurrentIndex] = useState(0);
+import 'swiper/css';
+import 'swiper/css/effect-fade';
+import 'swiper/css/navigation';
 
-  const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev === 0 ? featuredShows.length - 1 : prev - 1));
-  };
+const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
-  const goToNext = () => {
-    setCurrentIndex((prev) => (prev === featuredShows.length - 1 ? 0 : prev + 1));
-  };
+const img = (p) =>
+  p
+    ? `https://image.tmdb.org/t/p/original${p}`
+    : 'https://placehold.co/1600x900?text=No+Image';
 
-  const goToSlide = (index) => {
-    setCurrentIndex(index);
-  };
+async function tmdb(path, params = {}) {
+  const q = new URLSearchParams({
+    api_key: API_KEY,
+    language: 'en-US',
+    ...params,
+  });
 
-  const current = featuredShows[currentIndex];
+  const res = await fetch(
+    `https://api.themoviedb.org/3${path}?${q.toString()}`
+  );
+  if (!res.ok) throw new Error('TMDB error');
+  return res.json();
+}
+
+export default function Hero({ items }) {
+  const [slides, setSlides] = useState(items ?? []);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [loading, setLoading] = useState(!items || !items.length);
+
+  const {
+    isAuthenticated,
+    watchList,
+    favoriteList,
+    addToWatchlist,
+    removeFromWatchlist,
+    addToFavorites,
+    removeFromFavorites,
+  } = useAuth();
+
+  useEffect(() => {
+    if (items && items.length) {
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await tmdb('/movie/now_playing', {
+          page: 1,
+          region: 'US',
+        });
+        if (!mounted) return;
+        setSlides((data?.results ?? []).slice(0, 5));
+        setLoading(false);
+      } catch (e) {
+        console.error(e);
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [items]);
+
+  useEffect(() => {
+    if (!slides || slides.length === 0) return;
+    const nextIndex = (activeIndex + 1) % slides.length;
+    const nextSlide = slides[nextIndex];
+    if (!nextSlide) return;
+    const preload = new Image();
+    preload.src = img(nextSlide.backdrop_path || nextSlide.poster_path);
+  }, [activeIndex, slides]);
+
+  const cur = slides && slides.length ? slides[activeIndex] : null;
+
+  const genresText = (cur?.genre_names ?? []).slice(0, 3).map((g, idx) => (
+    <span
+      key={`${g}-${idx}`}
+      className="px-3 py-1 rounded-full bg-white/10 text-white text-sm border border-white/20"
+    >
+      {g}
+    </span>
+  ));
+
+  const hasSlides = slides && slides.length > 0;
 
   return (
-    <div className="relative w-full h-[500px] md:h-[700px] lg:h-[824px] overflow-hidden">
-      <img
-        src={current.image}
-        alt={current.title}
-        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
-      />
-      
-      <div className="absolute inset-0 bg-linear-to-t from-raisin-black via-transparent to-transparent" />
-      
-      <div className="relative h-full max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[70px] flex flex-col justify-end pb-12 md:pb-20">
-        <div className="flex items-start gap-2 mb-3 md:mb-4">
-          {current.genres.map((genre, idx) => (
-            <span key={idx} className="px-2 md:px-3 py-1 border border-white rounded text-white text-xs md:text-sm">
-              {genre}
-            </span>
-          ))}
+    <section className="relative w-full h-screen">
+      {loading && (
+        <div className="w-full h-full flex items-center justify-center bg-black">
+          <div className="text-white/80">Loading...</div>
         </div>
-        
-        <h1 className="text-white text-4xl md:text-6xl lg:text-[72px] font-bold leading-tight mb-2">
-          {current.title}
-        </h1>
-        
-        <div className="flex items-center gap-2 md:gap-3 text-white text-sm md:text-base lg:text-[18px] mb-4 md:mb-6">
-          <span>{current.rating}</span>
-          <span>•</span>
-          <span>{current.info}</span>
-          <span>•</span>
-          <span>{current.score}</span>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-3 md:gap-4">
-          <button className="px-4 md:px-6 py-2 md:py-2.5 bg-coquelicot text-white text-sm md:text-base lg:text-[18px] font-semibold rounded hover:bg-coquelicot/90 transition-colors">
-            Add to Watchlist
-          </button>
-          <button className="px-4 md:px-6 py-2 md:py-2.5 border border-white text-white text-sm md:text-base lg:text-[18px] font-semibold rounded hover:bg-white/10 transition-colors">
-            View more
-          </button>
-          <button className="p-2 md:p-2.5 border border-white text-white rounded hover:bg-white/10 transition-colors">
-            <Heart className="w-4 h-4 md:w-5 md:h-5" />
-          </button>
-        </div>
+      )}
 
-        <button 
-          onClick={goToPrevious}
-          className="hidden md:flex absolute bottom-20 left-4 p-2 text-white hover:text-coquelicot hover:bg-white/10 rounded-full transition-colors"
-          aria-label="Previous featured show"
-        >
-          <ChevronLeft className="w-6 h-6 lg:w-8 lg:h-8" />
-        </button>
-        
-        <button 
-          onClick={goToNext}
-          className="hidden md:flex absolute bottom-20 right-4 p-2 text-white hover:text-coquelicot hover:bg-white/10 rounded-full transition-colors"
-          aria-label="Next featured show"
-        >
-          <ChevronRight className="w-6 h-6 lg:w-8 lg:h-8" />
-        </button>
-
-        <div className="absolute bottom-4 md:bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2">
-          {featuredShows.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goToSlide(i)}
-              className={`rounded-full transition-all cursor-pointer ${
-                i === currentIndex 
-                  ? "bg-white w-2 h-2 md:w-3 md:h-3" 
-                  : "bg-white/40 w-1.5 h-1.5 md:w-2 md:h-2 hover:bg-white/60"
-              }`}
-              aria-label={`Go to slide ${i + 1}`}
-            />
-          ))}
+      {!loading && !hasSlides && (
+        <div className="w-full h-full flex items-center justify-center bg-black">
+          <div className="text-white/80">No slides</div>
         </div>
-      </div>
-    </div>
+      )}
+
+      {!loading && hasSlides && (
+        <Swiper
+          modules={[EffectFade, Navigation]}
+          effect="fade"
+          fadeEffect={{ crossFade: true }}
+          navigation={{
+            nextEl: '.hero-next',
+            prevEl: '.hero-prev',
+          }}
+          loop={true}
+          speed={900}
+          onSlideChange={(swiper) => setActiveIndex(swiper.realIndex)}
+          className="w-full h-full"
+        >
+          {slides.map((item, idx) => (
+            <SwiperSlide key={item.id ?? idx}>
+              <div className="relative w-full h-screen overflow-hidden">
+                <img
+                  src={img(item.backdrop_path || item.poster_path)}
+                  alt={item.title || `slide-${idx}`}
+                  className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
+                  loading="lazy"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/60" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-black/20" />
+
+                <div className="absolute inset-0">
+                  <div className="max-w-[1440px] mx-auto h-full relative">
+                    <div className="absolute inset-x-0 bottom-12 lg:bottom-0 lg:top-1/2 lg:left-15 px-4 sm:px-8 lg:px-[70px]">
+                      <div className="flex flex-col gap-4 max-w-[820px]">
+                        {genresText?.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {genresText}
+                          </div>
+                        )}
+
+                        <h2 className="text-white font-bold text-[34px] sm:text-[46px] lg:text-[56px] leading-tight drop-shadow">
+                          {item.title || ''}
+                        </h2>
+
+                        {(item.release_date ||
+                          item.first_air_date ||
+                          item.vote_average) && (
+                          <div className="inline-flex items-center gap-3 text-white/90 whitespace-nowrap leading-none text-[13px] sm:text-base">
+                            {(item.release_date || item.first_air_date) && (
+                              <span className="align-middle">
+                                {(
+                                  item.release_date ||
+                                  item.first_air_date ||
+                                  ''
+                                ).slice(0, 4)}
+                              </span>
+                            )}
+
+                            {(item.release_date || item.first_air_date) &&
+                              typeof item.vote_average === 'number' && (
+                                <span
+                                  aria-hidden
+                                  className="align-middle block h-[4px] w-[4px] rounded-full bg-white/70"
+                                />
+                              )}
+
+                            {typeof item.vote_average === 'number' && (
+                              <span className="inline-flex items-center gap-1 align-middle">
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 19 19"
+                                  fill="none"
+                                  className="translate-y-[1px]"
+                                >
+                                  <path
+                                    d="M16.346 8.95142C16.9889 8.37204 16.6422 7.30502 15.7815 7.21413L12.5461 6.87245C12.1912 6.83497 11.8832 6.61116 11.7378 6.28519L10.4136 3.31494C10.0612 2.52454 8.9393 2.52454 8.58691 3.31494L7.26266 6.28519C7.11732 6.61116 6.80927 6.83497 6.45434 6.87245L3.21894 7.21413C2.35832 7.30502 2.01163 8.37204 2.65447 8.95142L5.07101 11.1294C5.33613 11.3684 5.4538 11.7305 5.37978 12.0796L4.70524 15.261C4.52574 16.1076 5.43341 16.7671 6.18308 16.3347L9.00065 14.7098C9.30985 14.5314 9.69064 14.5314 9.99983 14.7098L12.8174 16.3347C13.5671 16.7671 14.4747 16.1076 14.2952 15.261L13.6207 12.0796C13.5467 11.7305 13.6644 11.3684 13.9295 11.1294L16.346 8.95142Z"
+                                    fill="#F5C519"
+                                  />
+                                </svg>
+                                <span className="align-middle">
+                                  {typeof item.vote_average === 'number'
+                                    ? item.vote_average.toFixed(1)
+                                    : ''}
+                                </span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-3 md:gap-4">
+                          {isAuthenticated && item.id && (
+                            <button
+                              onClick={() =>
+                                watchList.some(
+                                  (wItem) =>
+                                    item.id === wItem.id &&
+                                    'movie' === wItem.type
+                                )
+                                  ? removeFromWatchlist(item.id, 'movie')
+                                  : addToWatchlist(item.id, 'movie')
+                              }
+                              className={`px-4 md:px-6 py-3 md:py-3 rounded-lg font-normal transition-colors cursor-pointer bg-[#FF4002] ${
+                                watchList.some(
+                                  (wItem) =>
+                                    item.id === wItem.id &&
+                                    'movie' === wItem.type
+                                )
+                                  ? 'bg-[#FF4002] hover:bg-[#B32F03]'
+                                  : 'text-white hover:bg-[#B32F03]'
+                              }`}
+                            >
+                              {watchList.some(
+                                (wItem) =>
+                                  item.id === wItem.id && 'movie' === wItem.type
+                              )
+                                ? 'Remove from Watchlist'
+                                : 'Add to Watchlist'}
+                            </button>
+                          )}
+                          <Link
+                            to={'/movies/' + item.id}
+                            className="px-4 md:px-6 py-2 md:py-2.5 border border-white text-white text-sm md:text-base lg:text-[18px] rounded-lg hover:bg-white hover:text-black transition-colors cursor-pointer"
+                          >
+                            View more
+                          </Link>
+                          {isAuthenticated && item.id && (
+                            <button
+                              onClick={() =>
+                                favoriteList.some(
+                                  (fItem) =>
+                                    item.id === fItem.id &&
+                                    'movie' === fItem.type
+                                )
+                                  ? removeFromFavorites(item.id, 'movie')
+                                  : addToFavorites(item.id, 'movie')
+                              }
+                              className={`p-2.5 border rounded-lg transition-colors cursor-pointer ${
+                                favoriteList.some(
+                                  (fItem) =>
+                                    item.id === fItem.id &&
+                                    'movie' === fItem.type
+                                )
+                                  ? 'border-coquelicot bg-coquelicot/90 text-white'
+                                  : 'border-white text-white hover:bg-white/10'
+                              }`}
+                              aria-label="Toggle favorite"
+                            >
+                              <Heart
+                                className="w-5 h-5 md:w-6 md:h-6"
+                                fill={
+                                  favoriteList.some(
+                                    (fItem) =>
+                                      item.id === fItem.id &&
+                                      'movie' === fItem.type
+                                  )
+                                    ? 'white'
+                                    : 'none'
+                                }
+                              />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {slides.length > 1 && (
+                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+                        {slides.map((_, di) => (
+                          <button
+                            key={di}
+                            aria-label={`Go to slide ${di + 1}`}
+                            onClick={() => setActiveIndex(di)}
+                            className={`h-[12px] w-[12px] rounded-full cursor-pointer ${di === activeIndex ? 'bg-white' : 'bg-white/40'}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  aria-label="Previous"
+                  className="hero-prev absolute left-5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm cursor-pointer z-20 hidden md:block"
+                >
+                  <svg width="28" height="28" viewBox="0 0 37 37">
+                    <path
+                      d="M23.125 10.0209L13.875 19.2709L23.125 28.5209"
+                      stroke="#ffffff"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+                <button
+                  aria-label="Next"
+                  className="hero-next absolute right-5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm cursor-pointer hidden md:block"
+                >
+                  <svg width="28" height="28" viewBox="0 0 37 37">
+                    <path
+                      d="M13.875 10.0209L23.125 19.2709L13.875 28.5209"
+                      stroke="#ffffff"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      )}
+    </section>
   );
 }

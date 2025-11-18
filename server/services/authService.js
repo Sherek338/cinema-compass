@@ -84,12 +84,11 @@ const activate = async (activationLink) => {
   if (!user) {
     throw ApiError.BadRequest('Invalid activation link');
   }
-  if (user.isActivated) {
-    throw ApiError.BadRequest('Account is already activated');
-  }
 
   user.isActivated = true;
   await user.save();
+
+  return user.isActivated;
 };
 
 const refresh = async (refreshToken) => {

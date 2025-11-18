@@ -11,8 +11,8 @@ const getFavorites = async (userId) => {
   return favoriteList;
 };
 
-const addFavorite = async (userId, movieId) => {
-  if (!userId || !movieId) {
+const addFavorite = async (userId, newId) => {
+  if (!userId || !newId) {
     throw ApiError.BadRequest('User id and Movie id are required');
   }
 
@@ -21,18 +21,20 @@ const addFavorite = async (userId, movieId) => {
     throw ApiError.NotFound('User not found');
   }
 
-  const indexOfMovie = user.favoriteList.indexOf(movieId);
-  if (indexOfMovie !== -1) {
+  const index = user.favoriteList.findIndex(
+    (item) => item.id === newId.id && item.type === newId.type
+  );
+  if (index !== -1) {
     throw ApiError.Conflict('Movie already in favorites');
   }
 
-  user.favoriteList.push(movieId);
+  user.favoriteList.push(newId);
   await user.save();
   return user.favoriteList;
 };
 
-const deleteFavorite = async (userId, movieId) => {
-  if (!userId || !movieId) {
+const deleteFavorite = async (userId, newId) => {
+  if (!userId || !newId) {
     throw ApiError.BadRequest('User id and Movie id are required');
   }
 
@@ -41,14 +43,14 @@ const deleteFavorite = async (userId, movieId) => {
     throw ApiError.NotFound('User not found');
   }
 
-  const indexOfMovie = user.favoriteList.indexOf(movieId);
-  if (indexOfMovie === -1) {
+  const indexD = user.favoriteList.findIndex(
+    (item) => item.id === newId.id && item.type === newId.type
+  );
+  if (indexD === -1) {
     throw ApiError.NotFound('Movie not found in favorites');
   }
 
-  user.favoriteList = user.favoriteList.filter(
-    (_, index) => index !== indexOfMovie
-  );
+  user.favoriteList = user.favoriteList.filter((_, index) => index !== indexD);
   await user.save();
   return user.favoriteList;
 };
@@ -63,8 +65,8 @@ const getWatchlist = async (userId) => {
   return watchList;
 };
 
-const addWatchlist = async (userId, movieId) => {
-  if (!userId || !movieId) {
+const addWatchlist = async (userId, newId) => {
+  if (!userId || !newId) {
     throw ApiError.BadRequest('User id and Movie id are required');
   }
 
@@ -73,18 +75,20 @@ const addWatchlist = async (userId, movieId) => {
     throw ApiError.NotFound('User not found');
   }
 
-  const indexOfMovie = user.watchList.indexOf(movieId);
-  if (indexOfMovie !== -1) {
+  const index = user.watchList.findIndex(
+    (item) => item.id === newId.id && item.type === newId.type
+  );
+  if (index !== -1) {
     throw ApiError.Conflict('Movie already in watchlist');
   }
 
-  user.watchList.push(movieId);
+  user.watchList.push(newId);
   await user.save();
   return user.watchList;
 };
 
-const deleteWatchlist = async (userId, movieId) => {
-  if (!userId || !movieId) {
+const deleteWatchlist = async (userId, newId) => {
+  if (!userId || !newId) {
     throw ApiError.BadRequest('User id and Movie id are required');
   }
 
@@ -93,12 +97,14 @@ const deleteWatchlist = async (userId, movieId) => {
     throw ApiError.NotFound('User not found');
   }
 
-  const indexOfMovie = user.watchList.indexOf(movieId);
-  if (indexOfMovie === -1) {
+  const indexD = user.watchList.findIndex(
+    (item) => item.id === newId.id && item.type === newId.type
+  );
+  if (indexD === -1) {
     throw ApiError.NotFound('Movie not found in watchlist');
   }
 
-  user.watchList = user.watchList.filter((_, index) => index !== indexOfMovie);
+  user.watchList = user.watchList.filter((_, index) => index !== indexD);
   await user.save();
   return user.watchList;
 };
