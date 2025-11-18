@@ -13,6 +13,7 @@ const UserSchema = new Schema(
     password: { type: String, required: true },
     activationLink: { type: String, index: true },
     isActivated: { type: Boolean, default: false, index: true },
+    isAdmin: { type: Boolean, default: false },
     favoriteList: [
       {
         id: { type: Number, required: true },
