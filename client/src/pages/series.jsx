@@ -3,23 +3,7 @@ import Header from '@/components/header.jsx';
 import Footer from '@/components/footer.jsx';
 import MediaCard from '@/components/mediacard.jsx';
 
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
-
-const IMG = (p) =>
-  p ? `https://image.tmdb.org/t/p/w500${p}` : '/placeholder.png';
-
-async function tmdb(path, params = {}) {
-  const q = new URLSearchParams({
-    api_key: API_KEY,
-    language: 'en-US',
-    ...params,
-  });
-  const res = await fetch(
-    `https://api.themoviedb.org/3${path}?${q.toString()}`
-  );
-  if (!res.ok) throw new Error('TMDB request failed');
-  return res.json();
-}
+import tmdb from '@/service/tmdbApi';
 
 export default function Series() {
   const [page, setPage] = useState(1);
@@ -32,10 +16,11 @@ export default function Series() {
   const [yearFrom, setYearFrom] = useState('');
   const [yearTo, setYearTo] = useState('');
 
+  // Load TV genres
   useEffect(() => {
     (async () => {
       try {
-        const { genres } = await tmdb('/genre/tv/list');
+        const { genres } = await tmdb.getSeriesGenres();
         setGenres(genres || []);
       } catch (e) {
         console.error('Failed to load TV genres', e);
@@ -43,6 +28,7 @@ export default function Series() {
     })();
   }, []);
 
+  // Load content (Discover TV)
   useEffect(() => {
     (async () => {
       try {
@@ -57,10 +43,11 @@ export default function Series() {
         const gte =
           yearFrom && /^\d{4}$/.test(yearFrom) ? `${yearFrom}-01-01` : '';
         const lte = yearTo && /^\d{4}$/.test(yearTo) ? `${yearTo}-12-31` : '';
+
         if (gte) params['first_air_date.gte'] = gte;
         if (lte) params['first_air_date.lte'] = lte;
 
-        const data = await tmdb('/discover/tv', {
+        const data = await tmdb.discoverSeries({
           sort_by: 'popularity.desc',
           include_adult: 'false',
           include_null_first_air_dates: 'false',
@@ -120,6 +107,7 @@ export default function Series() {
             <div className="flex flex-col gap-[30px]">
               <h2 className="text-white font-bold text-xl">Filters</h2>
 
+              {/* DATE FILTER */}
               <div className="flex flex-col gap-2.5">
                 <h3 className="text-white text-lg font-normal">
                   First air date
@@ -154,6 +142,7 @@ export default function Series() {
                 </div>
               </div>
 
+              {/* GENRES */}
               <div className="flex flex-col gap-2.5">
                 <h3 className="text-white text-lg font-normal">Genres</h3>
                 <div className="w-full h-[23px] rounded-[5px] border border-[#D9D9D9] flex items-center px-2 text-[#999] text-[13px]">
@@ -200,6 +189,7 @@ export default function Series() {
             </div>
           </aside>
 
+          {/* CONTENT LIST */}
           <div className="flex-1 flex flex-col gap-[50px]">
             {loading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
@@ -220,7 +210,7 @@ export default function Series() {
                     year={(s.first_air_date || '').slice(0, 4)}
                     duration={null}
                     rating={s.vote_average ? s.vote_average.toFixed(1) : 'N/A'}
-                    poster={IMG(s.poster_path)}
+                    poster={tmdb.getImageUrl(s.poster_path, 'w500')}
                     type="series"
                     isSeries={true}
                   />
@@ -232,6 +222,7 @@ export default function Series() {
               </p>
             )}
 
+            {/* PAGINATION */}
             <div className="flex flex-col items-center gap-2.5 mt-4">
               <div className="flex items-center gap-2.5">
                 <button

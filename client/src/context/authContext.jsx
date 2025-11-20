@@ -15,6 +15,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
 
   const tokenRef = useRef('');
 
@@ -210,18 +211,34 @@ export function AuthProvider({ children }) {
     [apiRequest, optimisticUpdateList]
   );
 
+  const fetchIsAdmin = useCallback(async () => {
+    try {
+      const data = await apiRequest('/api/user/is-admin', { method: 'GET' });
+      return !!data.isAdmin;
+    } catch (err) {
+      return false;
+    }
+  }, [apiRequest]);
+
   const value = useMemo(
     () => ({
       user,
       setUser,
       accessToken: tokenRef.current,
+
+      adminModalOpen,
+      setAdminModalOpen,
       isAuthenticated,
+      fetchIsAdmin,
+
       authHeaders,
       loading,
       modalOpen,
       setModalOpen,
+
       watchList: user?.watchList || [],
       favoriteList: user?.favoriteList || [],
+
       login,
       register,
       logout,
@@ -231,6 +248,7 @@ export function AuthProvider({ children }) {
       removeFromWatchlist: (id, type) => updateWatchlist(id, type, 'remove'),
       addToFavorites: (id, type) => updateFavorites(id, type, 'add'),
       removeFromFavorites: (id, type) => updateFavorites(id, type, 'remove'),
+
       apiRequest,
     }),
     [
@@ -239,12 +257,15 @@ export function AuthProvider({ children }) {
       authHeaders,
       loading,
       modalOpen,
+      adminModalOpen,
+      setAdminModalOpen,
       login,
       register,
       logout,
       updateWatchlist,
       updateFavorites,
       apiRequest,
+      fetchIsAdmin,
     ]
   );
 

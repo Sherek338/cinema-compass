@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/authContext';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 import Hero from '@/components/hero.jsx';
 import MediaCard from '@/components/mediacard.jsx';
+import tmdb from '@/service/tmdbApi.js';
 
 function ScrollableSection({ children }) {
   const scrollRef = useRef(null);
@@ -99,25 +100,18 @@ export default function Home() {
   const [loadingWatchlist, setLoadingWatchlist] = useState(false);
   const [activeTab, setActiveTab] = useState('movies');
 
-  const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
-
+  // Fetch popular movies
   useEffect(() => {
     const fetchMovies = async () => {
       try {
         setLoadingMovies(true);
-        const res = await fetch(
-          `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&language=en-US&page=1`
-        );
-        const data = await res.json();
-
+        const data = await tmdb.getPopularMovies(1);
         const mapped = (data.results || []).map((m) => ({
           id: m.id,
           title: m.title,
           year: m.release_date ? m.release_date.slice(0, 4) : 'N/A',
           rating: m.vote_average ? m.vote_average.toFixed(1) : 'N/A',
-          poster: m.poster_path
-            ? `https://image.tmdb.org/t/p/w500${m.poster_path}`
-            : '/placeholder.png',
+          poster: tmdb.getImageUrl(m.poster_path, 'w500') || '/placeholder.png',
         }));
         setMovies(mapped);
       } catch (err) {
@@ -126,26 +120,21 @@ export default function Home() {
         setLoadingMovies(false);
       }
     };
-
     fetchMovies();
-  }, [API_KEY]);
+  }, []);
 
+  // Fetch popular series
   useEffect(() => {
     const fetchSeries = async () => {
       try {
         setLoadingSeries(true);
-        const res = await fetch(
-          `https://api.themoviedb.org/3/tv/popular?api_key=${API_KEY}&language=en-US&page=1`
-        );
-        const data = await res.json();
+        const data = await tmdb.getPopularSeries(1);
         const mapped = (data.results || []).map((s) => ({
           id: s.id,
           title: s.name,
           year: s.first_air_date ? s.first_air_date.slice(0, 4) : 'N/A',
           rating: s.vote_average ? s.vote_average.toFixed(1) : 'N/A',
-          poster: s.poster_path
-            ? `https://image.tmdb.org/t/p/w500${s.poster_path}`
-            : 'https://via.placeholder.com/400x600?text=No+Image',
+          poster: tmdb.getImageUrl(s.poster_path, 'w500') || '/placeholder.png',
         }));
         setSeries(mapped);
       } catch (err) {
@@ -154,10 +143,10 @@ export default function Home() {
         setLoadingSeries(false);
       }
     };
-
     fetchSeries();
-  }, [API_KEY]);
+  }, []);
 
+  // Fetch watchlist details
   useEffect(() => {
     const fetchWatchlistDetails = async () => {
       if (!isAuthenticated || !watchList || watchList.length === 0) {
@@ -168,44 +157,24 @@ export default function Home() {
       try {
         setLoadingWatchlist(true);
         const detailsPromises = watchList.map(async (item) => {
-          const endpoint =
-            item.type === 'movie'
-              ? `https://api.themoviedb.org/3/movie/${item.id}?api_key=${API_KEY}&language=en-US`
-              : `https://api.themoviedb.org/3/tv/${item.id}?api_key=${API_KEY}&language=en-US`;
-
           try {
-            const res = await fetch(endpoint);
-            const data = await res.json();
-
-            if (item.type === 'movie') {
-              return {
-                id: data.id,
-                title: data.title,
-                year: data.release_date ? data.release_date.slice(0, 4) : 'N/A',
-                rating: data.vote_average
-                  ? data.vote_average.toFixed(1)
-                  : 'N/A',
-                poster: data.poster_path
-                  ? `https://image.tmdb.org/t/p/w500${data.poster_path}`
-                  : '/placeholder.png',
-                isSeries: false,
-              };
-            } else {
-              return {
-                id: data.id,
-                title: data.name,
-                year: data.first_air_date
-                  ? data.first_air_date.slice(0, 4)
-                  : 'N/A',
-                rating: data.vote_average
-                  ? data.vote_average.toFixed(1)
-                  : 'N/A',
-                poster: data.poster_path
-                  ? `https://image.tmdb.org/t/p/w500${data.poster_path}`
-                  : 'https://via.placeholder.com/400x600?text=No+Image',
-                isSeries: true,
-              };
-            }
+            const data = await tmdb.getMediaDetails(
+              item.id,
+              item.type === 'series'
+            );
+            return {
+              id: data.id,
+              title: item.type === 'movie' ? data.title : data.name,
+              year:
+                item.type === 'movie'
+                  ? data.release_date?.slice(0, 4) || 'N/A'
+                  : data.first_air_date?.slice(0, 4) || 'N/A',
+              rating: data.vote_average ? data.vote_average.toFixed(1) : 'N/A',
+              poster:
+                tmdb.getImageUrl(data.poster_path, 'w500') ||
+                '/placeholder.png',
+              isSeries: item.type === 'series',
+            };
           } catch (error) {
             console.error(
               `Failed to fetch details for ${item.type} ${item.id}:`,
@@ -225,19 +194,17 @@ export default function Home() {
     };
 
     fetchWatchlistDetails();
-  }, [watchList, isAuthenticated, API_KEY]);
+  }, [watchList, isAuthenticated]);
 
   const trendingMovies = movies.slice(0, 10);
   const newReleaseMovies = movies.slice(10, 20);
   const topRatedMovies = [...movies]
-    .slice()
     .sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0))
     .slice(0, 10);
 
   const trendingSeries = series.slice(0, 10);
   const newReleaseSeries = series.slice(10, 20);
   const topRatedSeries = [...series]
-    .slice()
     .sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0))
     .slice(0, 10);
 
@@ -246,10 +213,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-raisin-black flex flex-col">
       <Header />
-
       <main className="flex-1 pt-0">
         <Hero />
-
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[70px] py-10 md:py-12 lg:py-16">
           <div className="flex items-center justify-center gap-6 md:gap-10 mb-12 md:mb-16">
             <button
@@ -257,11 +222,7 @@ export default function Home() {
               className="flex flex-col items-start gap-[5px] hover:opacity-80 transition-opacity cursor-pointer"
             >
               <h2
-                className={`text-xl md:text-[25px] ${
-                  activeTab === 'movies'
-                    ? 'font-bold text-white'
-                    : 'font-normal text-white'
-                }`}
+                className={`text-xl md:text-[25px] ${activeTab === 'movies' ? 'font-bold text-white' : 'font-normal text-white'}`}
               >
                 Movies
               </h2>
@@ -269,17 +230,12 @@ export default function Home() {
                 <div className="w-full h-[2px] bg-coquelicot" />
               )}
             </button>
-
             <button
               onClick={() => setActiveTab('series')}
               className="flex flex-col items-start gap-[5px] hover:opacity-80 transition-opacity cursor-pointer"
             >
               <h2
-                className={`text-xl md:text-[25px] ${
-                  activeTab === 'series'
-                    ? 'font-bold text-white'
-                    : 'font-normal text-white'
-                }`}
+                className={`text-xl md:text-[25px] ${activeTab === 'series' ? 'font-bold text-white' : 'font-normal text-white'}`}
               >
                 Series
               </h2>
@@ -289,6 +245,7 @@ export default function Home() {
             </button>
           </div>
 
+          {/* Movies Tab */}
           {activeTab === 'movies' ? (
             loadingMovies ? (
               <div className="w-full flex justify-center items-center min-h-[300px]">
@@ -310,15 +267,7 @@ export default function Home() {
                   </div>
                   <ScrollableSection>
                     {trendingMovies.map((movie) => (
-                      <MediaCard
-                        key={movie.id}
-                        id={movie.id}
-                        title={movie.title}
-                        year={movie.year}
-                        rating={movie.rating}
-                        poster={movie.poster}
-                        isSeries={false}
-                      />
+                      <MediaCard key={movie.id} {...movie} isSeries={false} />
                     ))}
                   </ScrollableSection>
                 </section>
@@ -337,15 +286,7 @@ export default function Home() {
                   </div>
                   <ScrollableSection>
                     {newReleaseMovies.map((movie) => (
-                      <MediaCard
-                        key={movie.id}
-                        id={movie.id}
-                        title={movie.title}
-                        year={movie.year}
-                        rating={movie.rating}
-                        poster={movie.poster}
-                        isSeries={false}
-                      />
+                      <MediaCard key={movie.id} {...movie} isSeries={false} />
                     ))}
                   </ScrollableSection>
                 </section>
@@ -364,15 +305,7 @@ export default function Home() {
                   </div>
                   <ScrollableSection>
                     {topRatedMovies.map((movie) => (
-                      <MediaCard
-                        key={movie.id}
-                        id={movie.id}
-                        title={movie.title}
-                        year={movie.year}
-                        rating={movie.rating}
-                        poster={movie.poster}
-                        isSeries={false}
-                      />
+                      <MediaCard key={movie.id} {...movie} isSeries={false} />
                     ))}
                   </ScrollableSection>
                 </section>
@@ -408,17 +341,8 @@ export default function Home() {
                   ) : (
                     <ScrollableSection>
                       {currentWatchlist.map((item) => (
-                        <MediaCard
-                          key={item.id}
-                          id={item.id}
-                          title={item.title}
-                          year={item.year}
-                          rating={item.rating}
-                          poster={item.poster}
-                          isSeries={item.isSeries}
-                        />
+                        <MediaCard key={item.id} {...item} />
                       ))}
-
                       <Link
                         to="/watchlist"
                         className="flex-shrink-0 flex items-center justify-center w-[180px] h-[260px] border border-[#3F3F3F] bg-[#343434] rounded-[10px] cursor-pointer hover:border-coquelicot transition-colors group"
@@ -433,7 +357,8 @@ export default function Home() {
                 </section>
               </>
             )
-          ) : loadingSeries ? (
+          ) : // Series Tab
+          loadingSeries ? (
             <div className="w-full flex justify-center items-center min-h-[300px]">
               <div className="w-12 h-12 rounded-full border-4 border-coquelicot border-t-transparent animate-spin" />
             </div>
@@ -453,15 +378,7 @@ export default function Home() {
                 </div>
                 <ScrollableSection>
                   {trendingSeries.map((show) => (
-                    <MediaCard
-                      key={show.id}
-                      id={show.id}
-                      title={show.title}
-                      year={show.year}
-                      rating={show.rating}
-                      poster={show.poster}
-                      isSeries={true}
-                    />
+                    <MediaCard key={show.id} {...show} isSeries={true} />
                   ))}
                 </ScrollableSection>
               </section>
@@ -480,15 +397,7 @@ export default function Home() {
                 </div>
                 <ScrollableSection>
                   {newReleaseSeries.map((show) => (
-                    <MediaCard
-                      key={show.id}
-                      id={show.id}
-                      title={show.title}
-                      year={show.year}
-                      rating={show.rating}
-                      poster={show.poster}
-                      isSeries={true}
-                    />
+                    <MediaCard key={show.id} {...show} isSeries={true} />
                   ))}
                 </ScrollableSection>
               </section>
@@ -507,15 +416,7 @@ export default function Home() {
                 </div>
                 <ScrollableSection>
                   {topRatedSeries.map((show) => (
-                    <MediaCard
-                      key={show.id}
-                      id={show.id}
-                      title={show.title}
-                      year={show.year}
-                      rating={show.rating}
-                      poster={show.poster}
-                      isSeries={true}
-                    />
+                    <MediaCard key={show.id} {...show} isSeries={true} />
                   ))}
                 </ScrollableSection>
               </section>
@@ -551,17 +452,8 @@ export default function Home() {
                 ) : (
                   <ScrollableSection>
                     {currentWatchlist.map((item) => (
-                      <MediaCard
-                        key={item.id}
-                        id={item.id}
-                        title={item.title}
-                        year={item.year}
-                        rating={item.rating}
-                        poster={item.poster}
-                        isSeries={item.isSeries}
-                      />
+                      <MediaCard key={item.id} {...item} />
                     ))}
-
                     <Link
                       to="/watchlist"
                       className="flex-shrink-0 flex items-center justify-center w-[180px] h-[260px] border border-[#3F3F3F] bg-[#343434] rounded-[10px] cursor-pointer hover:border-coquelicot transition-colors group"
@@ -578,7 +470,6 @@ export default function Home() {
           )}
         </div>
       </main>
-
       <Footer />
     </div>
   );

@@ -20,6 +20,7 @@ const validationError = (req, res, next) => {
   next();
 };
 
+router.get('/is-admin', authMiddleware, controller.checkIsAdmin);
 router.put(
   '/favorite',
   authMiddleware,
