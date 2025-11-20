@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Search, X, Menu } from 'lucide-react';
 import { useAuth } from '@/context/authContext.jsx';
@@ -6,7 +6,10 @@ import logo from '@/assets/logo.svg';
 import UserMenu from '@/components/usermenu.jsx';
 
 export default function Header() {
-  const { isAuthenticated, setModalOpen } = useAuth();
+  const { isAuthenticated, setModalOpen, fetchIsAdmin, setAdminModalOpen } =
+    useAuth();
+  const isAdmin = useRef(null);
+
   const [q, setQ] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
@@ -23,6 +26,28 @@ export default function Header() {
       window.removeEventListener('scroll', handleScroll);
     };
   }, [scrollThreshold]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkAdmin() {
+      if (!isAuthenticated) {
+        isAdmin.current = false;
+        return;
+      }
+
+      const result = await fetchIsAdmin();
+      if (isMounted) {
+        isAdmin.current = result;
+      }
+    }
+
+    checkAdmin();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, fetchIsAdmin]);
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -81,6 +106,18 @@ export default function Header() {
                     >
                       Favorites
                     </Link>
+                    {isAdmin.current && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          console.log('Admin panel');
+                          setAdminModalOpen(true);
+                        }}
+                        className="bg-coquelicot text-white px-4 py-2 rounded-full hover:bg-coquelicot/90 transition cursor-pointer hidden md:block"
+                      >
+                        Admin Panel
+                      </button>
+                    )}
                   </>
                 )}
               </nav>

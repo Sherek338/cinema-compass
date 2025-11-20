@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import ScrollToTop from '@/components/ScrollToTop';
 
@@ -17,6 +17,7 @@ import MyReviews from '@/components/MyReviews.jsx';
 
 import AuthModal from '@/components/authmodal.jsx';
 import ProtectedRoute from '@/components/ProtectedRoute.jsx';
+import AdminMediaModal from '@/components/AdminMediaModal.jsx';
 
 export const openAuthModal = () =>
   window.dispatchEvent(new CustomEvent('auth:open'));
@@ -25,6 +26,7 @@ export const closeAuthModal = () =>
 
 export default function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
   useEffect(() => {
     const onOpen = () => setShowAuthModal(true);
     const onClose = () => setShowAuthModal(false);
@@ -39,18 +41,19 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthModal open={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <AdminMediaModal
+        open={showAdminModal}
+        onClose={() => setShowAdminModal(false)}
+      />
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/movies" element={<Movies />} />
         <Route path="/series" element={<Series />} />
-
         <Route path="/movies/:id" element={<MediaDetail />} />
         <Route path="/series/:id" element={<MediaDetail />} />
-
         <Route path="/activate/:link" element={<ActivateAccount />} />
         <Route path="/search" element={<SearchResults />} />
-
         <Route
           path="/watchlist"
           element={
@@ -67,7 +70,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/profile"
           element={
@@ -77,7 +79,6 @@ export default function App() {
           }
         />
         <Route path="/my-reviews" element={<MyReviews />} />
-
         <Route
           path="/profile"
           element={

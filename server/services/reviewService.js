@@ -57,8 +57,11 @@ const addReview = async (userId, movieId, review) => {
   return dto;
 };
 
-const mustOwn = (review, userId) => {
+const mustOwn = (review, userId, isAdmin = false) => {
   if (!review) throw ApiError.NotFound('Review not found');
+
+  if (isAdmin) return;
+
   if (!review.user || String(review.user) !== String(userId)) {
     throw ApiError.Forbidden(
       'You do not have permission to modify this review'
@@ -91,7 +94,9 @@ const updateReview = async (reviewId, userId, data) => {
 const deleteReview = async (reviewId, userId) => {
   if (!userId) throw ApiError.UnauthorizedError();
   const review = await ReviewModel.findById(reviewId);
-  mustOwn(review, userId);
+  const user = await UserModel.findById(userId);
+  mustOwn(review, userId, user.isAdmin);
+
   await ReviewModel.deleteOne({ _id: reviewId });
   return true;
 };

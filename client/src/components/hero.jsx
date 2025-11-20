@@ -1,35 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/context/authContext.jsx';
+import { useAuth } from '@/context/authContext';
 import { Heart } from 'lucide-react';
-
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectFade, Navigation } from 'swiper/modules';
+import tmdb from '@/service/tmdbApi.js';
 
 import 'swiper/css';
 import 'swiper/css/effect-fade';
 import 'swiper/css/navigation';
-
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
-
-const img = (p) =>
-  p
-    ? `https://image.tmdb.org/t/p/original${p}`
-    : 'https://placehold.co/1600x900?text=No+Image';
-
-async function tmdb(path, params = {}) {
-  const q = new URLSearchParams({
-    api_key: API_KEY,
-    language: 'en-US',
-    ...params,
-  });
-
-  const res = await fetch(
-    `https://api.themoviedb.org/3${path}?${q.toString()}`
-  );
-  if (!res.ok) throw new Error('TMDB error');
-  return res.json();
-}
 
 export default function Hero({ items }) {
   const [slides, setSlides] = useState(items ?? []);
@@ -55,15 +34,12 @@ export default function Hero({ items }) {
     let mounted = true;
     (async () => {
       try {
-        const data = await tmdb('/movie/now_playing', {
-          page: 1,
-          region: 'US',
-        });
+        const data = await tmdb.getNowPlayingMovies(1, 'US');
         if (!mounted) return;
-        setSlides((data?.results ?? []).slice(0, 5));
-        setLoading(false);
+        setSlides((data.results ?? []).slice(0, 5));
       } catch (e) {
-        console.error(e);
+        console.error('Failed to fetch now playing movies:', e);
+      } finally {
         if (mounted) setLoading(false);
       }
     })();
@@ -74,26 +50,24 @@ export default function Hero({ items }) {
   }, [items]);
 
   useEffect(() => {
-    if (!slides || slides.length === 0) return;
+    if (!slides.length) return;
     const nextIndex = (activeIndex + 1) % slides.length;
     const nextSlide = slides[nextIndex];
     if (!nextSlide) return;
     const preload = new Image();
-    preload.src = img(nextSlide.backdrop_path || nextSlide.poster_path);
+    preload.src = tmdb.getImageUrl(
+      nextSlide.backdrop_path || nextSlide.poster_path,
+      'original'
+    );
   }, [activeIndex, slides]);
 
-  const cur = slides && slides.length ? slides[activeIndex] : null;
+  const cur = slides[activeIndex];
 
-  const genresText = (cur?.genre_names ?? []).slice(0, 3).map((g, idx) => (
-    <span
-      key={`${g}-${idx}`}
-      className="px-3 py-1 rounded-full bg-white/10 text-white text-sm border border-white/20"
-    >
-      {g}
-    </span>
-  ));
+  const img = (p) =>
+    tmdb.getImageUrl(p, 'original') ??
+    'https://placehold.co/1600x900?text=No+Image';
 
-  const hasSlides = slides && slides.length > 0;
+  const hasSlides = slides.length > 0;
 
   return (
     <section className="relative w-full h-screen">
@@ -140,57 +114,25 @@ export default function Hero({ items }) {
                   <div className="max-w-[1440px] mx-auto h-full relative">
                     <div className="absolute inset-x-0 bottom-12 lg:bottom-0 lg:top-1/2 lg:left-15 px-4 sm:px-8 lg:px-[70px]">
                       <div className="flex flex-col gap-4 max-w-[820px]">
-                        {genresText?.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {genresText}
-                          </div>
-                        )}
-
                         <h2 className="text-white font-bold text-[34px] sm:text-[46px] lg:text-[56px] leading-tight drop-shadow">
                           {item.title || ''}
                         </h2>
 
-                        {(item.release_date ||
-                          item.first_air_date ||
-                          item.vote_average) && (
+                        {(item.release_date || item.vote_average) && (
                           <div className="inline-flex items-center gap-3 text-white/90 whitespace-nowrap leading-none text-[13px] sm:text-base">
-                            {(item.release_date || item.first_air_date) && (
-                              <span className="align-middle">
-                                {(
-                                  item.release_date ||
-                                  item.first_air_date ||
-                                  ''
-                                ).slice(0, 4)}
-                              </span>
+                            {item.release_date && (
+                              <span>{item.release_date.slice(0, 4)}</span>
                             )}
-
-                            {(item.release_date || item.first_air_date) &&
+                            {item.release_date &&
                               typeof item.vote_average === 'number' && (
                                 <span
                                   aria-hidden
-                                  className="align-middle block h-[4px] w-[4px] rounded-full bg-white/70"
+                                  className="block h-[4px] w-[4px] rounded-full bg-white/70"
                                 />
                               )}
-
                             {typeof item.vote_average === 'number' && (
-                              <span className="inline-flex items-center gap-1 align-middle">
-                                <svg
-                                  width="14"
-                                  height="14"
-                                  viewBox="0 0 19 19"
-                                  fill="none"
-                                  className="translate-y-[1px]"
-                                >
-                                  <path
-                                    d="M16.346 8.95142C16.9889 8.37204 16.6422 7.30502 15.7815 7.21413L12.5461 6.87245C12.1912 6.83497 11.8832 6.61116 11.7378 6.28519L10.4136 3.31494C10.0612 2.52454 8.9393 2.52454 8.58691 3.31494L7.26266 6.28519C7.11732 6.61116 6.80927 6.83497 6.45434 6.87245L3.21894 7.21413C2.35832 7.30502 2.01163 8.37204 2.65447 8.95142L5.07101 11.1294C5.33613 11.3684 5.4538 11.7305 5.37978 12.0796L4.70524 15.261C4.52574 16.1076 5.43341 16.7671 6.18308 16.3347L9.00065 14.7098C9.30985 14.5314 9.69064 14.5314 9.99983 14.7098L12.8174 16.3347C13.5671 16.7671 14.4747 16.1076 14.2952 15.261L13.6207 12.0796C13.5467 11.7305 13.6644 11.3684 13.9295 11.1294L16.346 8.95142Z"
-                                    fill="#F5C519"
-                                  />
-                                </svg>
-                                <span className="align-middle">
-                                  {typeof item.vote_average === 'number'
-                                    ? item.vote_average.toFixed(1)
-                                    : ''}
-                                </span>
+                              <span className="inline-flex items-center gap-1">
+                                ⭐ {item.vote_average.toFixed(1)}
                               </span>
                             )}
                           </div>
@@ -203,7 +145,7 @@ export default function Hero({ items }) {
                                 watchList.some(
                                   (wItem) =>
                                     item.id === wItem.id &&
-                                    'movie' === wItem.type
+                                    wItem.type === 'movie'
                                 )
                                   ? removeFromWatchlist(item.id, 'movie')
                                   : addToWatchlist(item.id, 'movie')
@@ -212,7 +154,7 @@ export default function Hero({ items }) {
                                 watchList.some(
                                   (wItem) =>
                                     item.id === wItem.id &&
-                                    'movie' === wItem.type
+                                    wItem.type === 'movie'
                                 )
                                   ? 'bg-[#FF4002] hover:bg-[#B32F03]'
                                   : 'text-white hover:bg-[#B32F03]'
@@ -220,25 +162,27 @@ export default function Hero({ items }) {
                             >
                               {watchList.some(
                                 (wItem) =>
-                                  item.id === wItem.id && 'movie' === wItem.type
+                                  item.id === wItem.id && wItem.type === 'movie'
                               )
                                 ? 'Remove from Watchlist'
                                 : 'Add to Watchlist'}
                             </button>
                           )}
+
                           <Link
-                            to={'/movies/' + item.id}
+                            to={`/movies/${item.id}`}
                             className="px-4 md:px-6 py-2 md:py-2.5 border border-white text-white text-sm md:text-base lg:text-[18px] rounded-lg hover:bg-white hover:text-black transition-colors cursor-pointer"
                           >
                             View more
                           </Link>
+
                           {isAuthenticated && item.id && (
                             <button
                               onClick={() =>
                                 favoriteList.some(
                                   (fItem) =>
                                     item.id === fItem.id &&
-                                    'movie' === fItem.type
+                                    fItem.type === 'movie'
                                 )
                                   ? removeFromFavorites(item.id, 'movie')
                                   : addToFavorites(item.id, 'movie')
@@ -247,7 +191,7 @@ export default function Hero({ items }) {
                                 favoriteList.some(
                                   (fItem) =>
                                     item.id === fItem.id &&
-                                    'movie' === fItem.type
+                                    fItem.type === 'movie'
                                 )
                                   ? 'border-coquelicot bg-coquelicot/90 text-white'
                                   : 'border-white text-white hover:bg-white/10'
@@ -260,7 +204,7 @@ export default function Hero({ items }) {
                                   favoriteList.some(
                                     (fItem) =>
                                       item.id === fItem.id &&
-                                      'movie' === fItem.type
+                                      fItem.type === 'movie'
                                   )
                                     ? 'white'
                                     : 'none'
@@ -271,6 +215,7 @@ export default function Hero({ items }) {
                         </div>
                       </div>
                     </div>
+
                     {slides.length > 1 && (
                       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
                         {slides.map((_, di) => (
@@ -278,16 +223,19 @@ export default function Hero({ items }) {
                             key={di}
                             aria-label={`Go to slide ${di + 1}`}
                             onClick={() => setActiveIndex(di)}
-                            className={`h-[12px] w-[12px] rounded-full cursor-pointer ${di === activeIndex ? 'bg-white' : 'bg-white/40'}`}
+                            className={`h-[12px] w-[12px] rounded-full cursor-pointer ${
+                              di === activeIndex ? 'bg-white' : 'bg-white/40'
+                            }`}
                           />
                         ))}
                       </div>
                     )}
                   </div>
                 </div>
+
                 <button
                   aria-label="Previous"
-                  className="hero-prev absolute left-5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm cursor-pointer z-20 hidden md:block"
+                  className="hero-prev absolute left-5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm cursor-pointer hidden md:block"
                 >
                   <svg width="28" height="28" viewBox="0 0 37 37">
                     <path
@@ -299,6 +247,7 @@ export default function Hero({ items }) {
                     />
                   </svg>
                 </button>
+
                 <button
                   aria-label="Next"
                   className="hero-next absolute right-5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm cursor-pointer hidden md:block"

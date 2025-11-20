@@ -3,23 +3,7 @@ import Header from '@/components/header.jsx';
 import Footer from '@/components/footer.jsx';
 import MediaCard from '@/components/mediacard.jsx';
 
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
-
-const IMG = (p) =>
-  p ? `https://image.tmdb.org/t/p/w500${p}` : '/placeholder.png';
-
-async function tmdb(path, params = {}) {
-  const q = new URLSearchParams({
-    api_key: API_KEY,
-    language: 'en-US',
-    ...params,
-  });
-  const res = await fetch(
-    `https://api.themoviedb.org/3${path}?${q.toString()}`
-  );
-  if (!res.ok) throw new Error('TMDB request failed');
-  return res.json();
-}
+import tmdb from '@/service/tmdbApi';
 
 export default function Movies() {
   const [page, setPage] = useState(1);
@@ -35,7 +19,7 @@ export default function Movies() {
   useEffect(() => {
     (async () => {
       try {
-        const { genres } = await tmdb('/genre/movie/list');
+        const { genres } = await tmdb.getMovieGenres();
         setGenres(genres || []);
       } catch (e) {
         console.error('Failed to load genres', e);
@@ -57,10 +41,11 @@ export default function Movies() {
         const gte =
           yearFrom && /^\d{4}$/.test(yearFrom) ? `${yearFrom}-01-01` : '';
         const lte = yearTo && /^\d{4}$/.test(yearTo) ? `${yearTo}-12-31` : '';
+
         if (gte) params['primary_release_date.gte'] = gte;
         if (lte) params['primary_release_date.lte'] = lte;
 
-        const data = await tmdb('/discover/movie', {
+        const data = await tmdb.discoverMovies({
           sort_by: 'popularity.desc',
           include_adult: 'false',
           include_video: 'false',
@@ -116,6 +101,7 @@ export default function Movies() {
             <div className="flex flex-col gap-[30px]">
               <h2 className="text-white font-bold text-xl">Filters</h2>
 
+              {/* Release date */}
               <div className="flex flex-col gap-2.5">
                 <h3 className="text-white text-lg font-normal">Release date</h3>
                 <div className="flex items-center gap-2.5">
@@ -148,6 +134,7 @@ export default function Movies() {
                 </div>
               </div>
 
+              {/* Genres */}
               <div className="flex flex-col gap-2.5">
                 <h3 className="text-white text-lg font-normal">Genres</h3>
                 <div className="w-full h-[23px] rounded-[5px] border border-[#D9D9D9] flex items-center px-2 text-[#999] text-[13px]">
@@ -194,6 +181,7 @@ export default function Movies() {
             </div>
           </aside>
 
+          {/* Movies */}
           <div className="flex-1 flex flex-col gap-[50px]">
             {loading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
@@ -214,7 +202,7 @@ export default function Movies() {
                     year={(m.release_date || '').slice(0, 4)}
                     duration={null}
                     rating={m.vote_average ? m.vote_average.toFixed(1) : 'N/A'}
-                    poster={IMG(m.poster_path)}
+                    poster={tmdb.getImageUrl(m.poster_path, 'w500')}
                     type="movie"
                   />
                 ))}
@@ -225,6 +213,7 @@ export default function Movies() {
               </p>
             )}
 
+            {/* Pagination */}
             <div className="flex flex-col items-center gap-2.5 mt-4">
               <div className="flex items-center gap-2.5">
                 <button

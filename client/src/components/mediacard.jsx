@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
 
 export default function MediaCard({
-                                    id,
-                                    title,
-                                    year,
-                                    rating,
-                                    poster,
-                                    isSeries = false,
-                                  }) {
+  id,
+  title,
+  year,
+  rating,
+  poster,
+  isSeries = false,
+}) {
   const detailPath = isSeries ? `/series/${id}` : `/movies/${id}`;
   const numericRating = rating && rating !== 'N/A' ? rating : null;
 

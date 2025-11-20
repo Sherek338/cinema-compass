@@ -9,17 +9,20 @@ dotenv.config();
 import authRouter from './router/authRouter.js';
 import movieListRouter from './router/userRouter.js';
 import reviewRouter from './router/reviewRouter.js';
+import tmdbRoutes from './router/tmdbRouter.js';
 import adminRouter from './router/adminRouter.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
+import isAdminMiddleware from './middleware/adminMiddleware.js';
+import authMiddleware from './middleware/authMiddleware.js';
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const PORT = process.env.PORT || 3000;
 const URI = process.env.DB_URI;
 const clientOptions = {
-  serverApi: { version: '1', strict: true, deprecationErrors: true },
+  serverApi: { version: '1', strict: false, deprecationErrors: true },
 };
 const corsOptions = {
-  origin: process.env.CLIENT_URL,
+  origin: CLIENT_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -37,6 +40,9 @@ app.options(/.*/, cors(corsOptions));
 app.use('/api/auth', authRouter);
 app.use('/api/user', movieListRouter);
 app.use('/api/review', reviewRouter);
+app.use('/api/tmdb', tmdbRoutes);
+app.use(authMiddleware);
+app.use(isAdminMiddleware);
 app.use('/api/admin', adminRouter);
 
 app.use(errorMiddleware);

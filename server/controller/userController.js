@@ -1,4 +1,23 @@
 import userService from '../services/userService.js';
+import UserModel from '../models/UserModel.js';
+
+async function checkIsAdmin(req, res) {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await UserModel.findById(req.user.id).lean();
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ isAdmin: !!user.isAdmin });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
 
 const getFavorites = async (req, res, next) => {
   try {
@@ -75,6 +94,7 @@ const updateWatchlist = async (req, res, next) => {
 };
 
 export default {
+  checkIsAdmin,
   getFavorites,
   updateFavorite,
   getWatchlist,

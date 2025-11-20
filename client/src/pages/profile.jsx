@@ -3,9 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/header.jsx';
 import Footer from '@/components/footer.jsx';
 import { useAuth } from '@/context/authContext.jsx';
+import tmdb from '@/service/tmdbApi.js';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
-const TMDB_BASE = 'https://api.themoviedb.org/3';
 const MAX_FIRST_ROW = 3;
 
 function formatRuntime(runtime) {
@@ -17,45 +17,44 @@ function formatRuntime(runtime) {
   return `${h}h ${m}m`;
 }
 
-async function fetchOneTMDB(id, type, apiKey, signal) {
-  const url = `${TMDB_BASE}/${type === 'movie' ? 'movie' : 'tv'}/${id}?api_key=${apiKey}&language=en-US`;
-  let res = await fetch(url, { signal });
-  if (!res.ok) {
-    res = await fetch(
-      `${TMDB_BASE}/tv/${id}?api_key=${apiKey}&language=en-US`,
-      { signal }
-    );
-    if (!res.ok) return null;
+async function fetchMediaItem(id, type) {
+  try {
+    const isSeries = type === 'series';
+
+    const data = await tmdb.getMediaDetails(id, isSeries);
+
+    const poster = data.poster_path
+      ? tmdb.getImageUrl(data.poster_path, 'w342')
+      : '/placeholder.png';
+
+    const seasons =
+      isSeries && typeof data.number_of_seasons === 'number'
+        ? `${data.number_of_seasons} season${data.number_of_seasons === 1 ? '' : 's'}`
+        : null;
+
+    const duration =
+      !isSeries && typeof data.runtime === 'number'
+        ? formatRuntime(data.runtime)
+        : null;
+
+    return {
+      id: data.id,
+      title: data.title || data.name || 'Untitled',
+      year: (data.release_date || data.first_air_date || '').slice(0, 4),
+      rating:
+        typeof data.vote_average === 'number'
+          ? data.vote_average.toFixed(1) === '0.0'
+            ? 'N/A'
+            : data.vote_average.toFixed(1)
+          : null,
+      poster,
+      isSeries,
+      meta: seasons || duration || null,
+    };
+  } catch (e) {
+    console.error('Failed to load TMDB data', e);
+    return null;
   }
-  const data = await res.json();
-  const isSeries = type === 'series';
-
-  const seasons =
-    isSeries && typeof data.number_of_seasons === 'number'
-      ? `${data.number_of_seasons} season${data.number_of_seasons === 1 ? '' : 's'}`
-      : null;
-
-  const duration =
-    !isSeries && typeof data.runtime === 'number'
-      ? formatRuntime(data.runtime)
-      : null;
-
-  return {
-    id: data.id,
-    title: data.title || data.name || 'Untitled',
-    year: (data.release_date || data.first_air_date || '').slice(0, 4),
-    rating:
-      typeof data.vote_average === 'number'
-        ? data.vote_average.toFixed(1) === '0.0'
-          ? 'N/A'
-          : data.vote_average.toFixed(1)
-        : null,
-    poster: data.poster_path
-      ? `https://image.tmdb.org/t/p/w342${data.poster_path}`
-      : '/placeholder.png',
-    isSeries,
-    meta: seasons || duration || null,
-  };
 }
 
 function ProfileMovieCard({ id, title, year, rating, poster, isSeries, meta }) {
@@ -88,13 +87,7 @@ function ProfileMovieCard({ id, title, year, rating, poster, isSeries, meta }) {
             <>
               <span>•</span>
               <div className="flex items-center gap-1">
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 19 19"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg width="13" height="13" viewBox="0 0 19 19" fill="none">
                   <path
                     d="M16.346 8.95142C16.9889 8.37204 16.6422 7.30502 15.7815 7.21413L12.5461 6.87245C12.1912 6.83497 11.8832 6.61116 11.7378 6.28519L10.4136 3.31494C10.0612 2.52454 8.9393 2.52454 8.58691 3.31494L7.26266 6.28519C7.11732 6.61116 6.80927 6.83497 6.45434 6.87245L3.21894 7.21413C2.35832 7.30502 2.01163 8.37204 2.65447 8.95142L5.07101 11.1294C5.33613 11.3684 5.4538 11.7305 5.37978 12.0796L4.70524 15.261C4.52574 16.1076 5.43341 16.7671 6.18308 16.3347L9.00065 14.7098C9.30985 14.5314 9.69064 14.5314 9.99983 14.7098L12.8174 16.3347C13.5671 16.7671 14.4747 16.1076 14.2952 15.261L13.6207 12.0796C13.5467 11.7305 13.6644 11.3684 13.9295 11.1294L16.346 8.95142Z"
                     fill="#F5C519"
@@ -138,14 +131,7 @@ function UserReviewCard({
 
           <div className="flex items-center gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => (
-              <svg
-                key={i}
-                width="19"
-                height="19"
-                viewBox="0 0 19 19"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
+              <svg key={i} width="19" height="19" viewBox="0 0 19 19">
                 <path
                   d="M16.346 8.95142C16.9889 8.37204 16.6422 7.30502 15.7815 7.21413L12.5461 6.87245C12.1912 6.83497 11.8832 6.61116 11.7378 6.28519L10.4136 3.31494C10.0612 2.52454 8.9393 2.52454 8.58691 3.31494L7.26266 6.28519C7.11732 6.61116 6.80927 6.83497 6.45434 6.87245L3.21894 7.21413C2.35832 7.30502 2.01163 8.37204 2.65447 8.95142L5.07101 11.1294C5.33613 11.3684 5.4538 11.7305 5.37978 12.0796L4.70524 15.261C4.52574 16.1076 5.43341 16.7671 6.18308 16.3347L9.00065 14.7098C9.30985 14.5314 9.69064 14.5314 9.99983 14.7098L12.8174 16.3347C13.5671 16.7671 14.4747 16.1076 14.2952 15.261L13.6207 12.0796C13.5467 11.7305 13.6644 11.3684 13.9295 11.1294L16.346 8.95142Z"
                   fill={i < stars ? '#F5C519' : '#CACACA'}
@@ -155,31 +141,24 @@ function UserReviewCard({
           </div>
         </div>
 
-        <div className="relative">
-          <p className="text-white text-[15px] font-normal leading-relaxed text-justify">
-            {getReviewExcerpt(review.review, 200)}
-            {review.review && review.review.length > 200 && (
-              <span className="text-white/80 text-[13px] font-semibold ml-1">
-                ...Read more
-              </span>
-            )}
-          </p>
-        </div>
+        <p className="text-white text-[15px] leading-relaxed text-justify">
+          {getReviewExcerpt(review.review, 200)}
+          {review.review?.length > 200 && (
+            <span className="text-white/80 text-[13px] font-semibold ml-1">
+              ...Read more
+            </span>
+          )}
+        </p>
       </div>
 
       <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onEdit}
-          className="text-white text-[15px] font-bold italic hover:opacity-80 transition-opacity cursor-pointer"
-        >
+        <button onClick={onEdit} className="text-white font-bold italic">
           Edit
         </button>
         <button
-          type="button"
           onClick={onDelete}
           disabled={deleting}
-          className="text-white text-[15px] font-bold italic hover:opacity-80 transition-opacity disabled:opacity-50 cursor-pointer"
+          className="text-white font-bold italic disabled:opacity-50"
         >
           {deleting ? 'Deleting...' : 'Delete'}
         </button>
@@ -201,13 +180,10 @@ export default function Profile() {
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [deletingReviewId, setDeletingReviewId] = useState(null);
 
-  const TMDB_KEY = import.meta.env.VITE_TMDB_API_KEY;
-
   useEffect(() => {
     let cancelled = false;
-    const controller = new AbortController();
 
-    const load = async () => {
+    const loadLists = async () => {
       try {
         setLoadingLists(true);
 
@@ -217,47 +193,34 @@ export default function Profile() {
           return;
         }
 
-        if (!TMDB_KEY) {
-          console.error('Missing VITE_TMDB_API_KEY');
-          return;
+        const fav = favoriteList?.length
+          ? await Promise.all(
+              favoriteList.map((item) => fetchMediaItem(item.id, item.type))
+            )
+          : [];
+
+        const watch = watchList?.length
+          ? await Promise.all(
+              watchList.map((item) => fetchMediaItem(item.id, item.type))
+            )
+          : [];
+
+        if (!cancelled) {
+          setFavorites(fav.filter(Boolean));
+          setWatchlist(watch.filter(Boolean));
         }
-
-        const [favRes, watchRes] = await Promise.all([
-          favoriteList && favoriteList.length
-            ? Promise.all(
-                favoriteList.map((item) =>
-                  fetchOneTMDB(item.id, item.type, TMDB_KEY, controller.signal)
-                )
-              )
-            : Promise.resolve([]),
-          watchList && watchList.length
-            ? Promise.all(
-                watchList.map((item) =>
-                  fetchOneTMDB(item.id, item.type, TMDB_KEY, controller.signal)
-                )
-              )
-            : Promise.resolve([]),
-        ]);
-
-        if (cancelled) return;
-
-        setFavorites((favRes || []).filter(Boolean));
-        setWatchlist((watchRes || []).filter(Boolean));
-      } catch (err) {
-        if (cancelled) return;
-        console.error('Failed to load profile lists', err);
+      } catch (error) {
+        if (!cancelled) console.error('Failed to load lists', error);
       } finally {
         if (!cancelled) setLoadingLists(false);
       }
     };
 
-    load();
-
+    loadLists();
     return () => {
       cancelled = true;
-      controller.abort();
     };
-  }, [isAuthenticated, favoriteList, watchList, TMDB_KEY]);
+  }, [isAuthenticated, favoriteList, watchList]);
 
   useEffect(() => {
     let cancelled = false;
@@ -278,7 +241,6 @@ export default function Profile() {
         });
 
         if (!res.ok) {
-          console.error('Failed to fetch user reviews', res.status);
           setMyReviews([]);
           return;
         }
@@ -287,18 +249,11 @@ export default function Profile() {
         let list = Array.isArray(data) ? data : data?.reviews || [];
         list = list.filter(Boolean);
 
-        list.sort((a, b) => {
-          const da = a.createdAt || 0;
-          const db = b.createdAt || 0;
-          return new Date(db) - new Date(da);
-        });
+        list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        if (!cancelled) {
-          setMyReviews(list);
-        }
+        if (!cancelled) setMyReviews(list);
       } catch (err) {
-        if (cancelled) return;
-        console.error('Failed to load user reviews', err);
+        if (!cancelled) console.error('Failed to load reviews', err);
         setMyReviews([]);
       } finally {
         if (!cancelled) setLoadingReviews(false);
@@ -306,7 +261,6 @@ export default function Profile() {
     };
 
     loadReviews();
-
     return () => {
       cancelled = true;
     };
@@ -315,64 +269,47 @@ export default function Profile() {
   const displayName =
     user?.username || (user?.email ? user.email.split('@')[0] : 'User');
 
-  const hasFavorites = favorites.length > 0;
-  const hasWatchlist = watchlist.length > 0;
-  const hasReviews = myReviews.length > 0;
-
   const formatReviewDate = (raw) => {
-    if (!raw) return 'Unknown date';
     const d = new Date(raw);
-    if (Number.isNaN(d.getTime())) return 'Unknown date';
-    return d.toLocaleDateString('en-US', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+    return Number.isNaN(d)
+      ? 'Unknown date'
+      : d.toLocaleDateString('en-US', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        });
   };
 
-  const getReviewExcerpt = (text, max = 200) => {
-    if (!text) return '';
-    if (text.length <= max) return text;
-    return `${text.slice(0, max).trim()}...`;
-  };
+  const getReviewExcerpt = (text, max = 200) =>
+    text?.length > max ? text.slice(0, max).trim() + '...' : text || '';
 
-  const starsForRating = (rating) => {
-    const r = typeof rating === 'number' ? rating : Number(rating) || 0;
-    return Math.max(0, Math.min(5, Math.round(r)));
-  };
+  const starsForRating = (rating) =>
+    Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
 
   const handleEditReview = (review) => {
-    if (!review || typeof review.movieId === 'undefined') return;
-    const id = review.movieId;
-    const path = review.isSeries ? `/series/${id}` : `/movies/${id}`;
+    const path = review.isSeries
+      ? `/series/${review.movieId}`
+      : `/movies/${review.movieId}`;
     navigate(path);
   };
 
   const handleDeleteReview = async (review) => {
     if (!review || !review.id || deletingReviewId) return;
-
     try {
       setDeletingReviewId(review.id);
-
-      const res = await fetch(`${API_URL}/api/reviews/${review.id}`, {
+      await fetch(`${API_URL}/api/reviews/${review.id}`, {
         method: 'DELETE',
         credentials: 'include',
         headers: { ...authHeaders },
       });
 
-      if (!res.ok && res.status !== 204) {
-        console.error('Failed to delete review', res.status);
-      }
-
       setMyReviews((prev) => prev.filter((r) => r.id !== review.id));
-    } catch (err) {
-      console.error('Failed to delete review', err);
     } finally {
       setDeletingReviewId(null);
     }
   };
 
-  const firstRowReviews = hasReviews ? myReviews.slice(0, MAX_FIRST_ROW) : [];
+  const firstRowReviews = myReviews.slice(0, MAX_FIRST_ROW);
 
   return (
     <div className="min-h-screen bg-raisin-black">
@@ -384,132 +321,80 @@ export default function Profile() {
             My profile
           </h1>
 
-          <div className="flex items-center gap-4 mb-12 md:mb-20">
-            <div className="w-16 h-16 md:w-[71px] md:h-[71px] rounded-full bg-gradient-to-br from-coquelicot to-orange-600 flex items-center justify-center">
-              <svg
-                width="40"
-                height="40"
-                viewBox="0 0 30 30"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-8 h-8 md:w-10 md:h-10"
-              >
-                <g clipPath="url(#clip0_profile_avatar)">
-                  <path
-                    d="M9.80872 15.0659C4.61646 17.1354 0.933595 22.2027 0.933601 28.125C0.933129 28.2487 0.957151 28.3713 1.00428 28.4857C1.05141 28.6001 1.12072 28.7041 1.20821 28.7916C1.2957 28.879 1.39964 28.9483 1.51404 28.9955C1.62844 29.0426 1.75104 29.0666 1.87476 29.0662H28.1248C28.3734 29.0652 28.6115 28.9655 28.7866 28.789C28.9617 28.6125 29.0595 28.3736 29.0586 28.125C29.0586 22.2033 25.3767 17.1358 20.1853 15.0659C18.7497 16.1917 16.9486 16.8713 14.9961 16.8713C13.0432 16.8713 11.243 16.1921 9.80872 15.0659Z"
-                    fill="white"
-                  />
-                  <path
-                    d="M14.996 0.941162C10.8649 0.941162 7.50147 4.30467 7.50146 8.43567C7.50147 12.5667 10.8649 15.9375 14.996 15.9375C19.127 15.9375 22.4978 12.5667 22.4978 8.43567C22.4978 4.30467 19.127 0.941162 14.996 0.941162Z"
-                    fill="white"
-                  />
-                </g>
-                <defs>
-                  <clipPath id="clip0_profile_avatar">
-                    <rect width="30" height="30" fill="white" />
-                  </clipPath>
-                </defs>
-              </svg>
-            </div>
-            <h2 className="text-white text-xl md:text-[25px] font-normal">
-              {isAuthenticated
-                ? user?.username ||
-                  (user?.email ? user.email.split('@')[0] : 'User')
-                : 'Guest'}
-            </h2>
-          </div>
-
+          {/* Favorites */}
           <section className="mb-12 md:mb-16">
-            <div className="flex items-end justify-between mb-5 md:mb-6">
+            <div className="flex items-end justify-between mb-6">
               <h2 className="text-white text-2xl md:text-[30px] font-bold">
                 Favourites
               </h2>
               <Link
                 to="/favorites"
-                className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors"
+                className="text-white hover:text-coquelicot"
               >
                 View all
               </Link>
             </div>
 
             {loadingLists ? (
-              <p className="text-sm text-gray-200">Loading favourites...</p>
+              <p className="text-gray-200 text-sm">Loading favourites...</p>
             ) : !isAuthenticated ? (
-              <p className="text-sm text-gray-200">
+              <p className="text-gray-200 text-sm">
                 Please sign in to see your favourites.
               </p>
             ) : favorites.length === 0 ? (
-              <p className="text-sm text-gray-200">
+              <p className="text-gray-200 text-sm">
                 You do not have any favourites yet.
               </p>
             ) : (
-              <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
-                {favorites.map((movie) => (
-                  <ProfileMovieCard
-                    key={movie.id}
-                    id={movie.id}
-                    title={movie.title}
-                    year={movie.year}
-                    rating={movie.rating}
-                    meta={movie.meta}
-                    poster={movie.poster}
-                    isSeries={movie.isSeries}
-                  />
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                {favorites.map((m) => (
+                  <ProfileMovieCard key={m.id} {...m} />
                 ))}
               </div>
             )}
           </section>
 
+          {/* Watchlist */}
           <section className="mb-12 md:mb-16">
-            <div className="flex items-end justify-between mb-5 md:mb-6">
+            <div className="flex items-end justify-between mb-6">
               <h2 className="text-white text-2xl md:text-[30px] font-bold">
                 My Watchlist
               </h2>
               <Link
                 to="/watchlist"
-                className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors"
+                className="text-white hover:text-coquelicot"
               >
                 View all
               </Link>
             </div>
 
             {loadingLists ? (
-              <p className="text-sm text-gray-200">Loading watchlist...</p>
+              <p className="text-gray-200 text-sm">Loading watchlist...</p>
             ) : !isAuthenticated ? (
-              <p className="text-sm text-gray-200">
+              <p className="text-gray-200 text-sm">
                 Please sign in to see your watchlist.
               </p>
             ) : watchlist.length === 0 ? (
-              <p className="text-sm text-gray-200">
-                You do not have anything in your watchlist yet.
-              </p>
+              <p className="text-gray-200 text-sm">Your watchlist is empty.</p>
             ) : (
-              <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
-                {watchlist.map((movie) => (
-                  <ProfileMovieCard
-                    key={movie.id}
-                    id={movie.id}
-                    title={movie.title}
-                    year={movie.year}
-                    rating={movie.rating}
-                    poster={movie.poster}
-                    isSeries={movie.isSeries}
-                    meta={movie.meta}
-                  />
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                {watchlist.map((m) => (
+                  <ProfileMovieCard key={m.id} {...m} />
                 ))}
               </div>
             )}
           </section>
 
+          {/* Reviews */}
           <section>
-            <div className="flex items-end justify-between mb-5 md:mb-6">
+            <div className="flex items-end justify-between mb-6">
               <h2 className="text-white text-2xl md:text-[30px] font-bold">
                 My Reviews
               </h2>
-              {hasReviews && (
+              {myReviews.length > 0 && (
                 <Link
                   to="/my-reviews"
-                  className="text-white text-sm md:text-[18px] hover:text-coquelicot transition-colors"
+                  className="text-white hover:text-coquelicot"
                 >
                   View all
                 </Link>
@@ -517,12 +402,12 @@ export default function Profile() {
             </div>
 
             {!isAuthenticated ? (
-              <p className="text-sm text-gray-200">
+              <p className="text-gray-200 text-sm">
                 Please sign in to see your reviews.
               </p>
             ) : loadingReviews ? (
               <p className="text-sm text-gray-200">Loading reviews...</p>
-            ) : !hasReviews ? (
+            ) : myReviews.length === 0 ? (
               <p className="text-sm text-gray-200">
                 You have not written any reviews yet.
               </p>
@@ -532,10 +417,7 @@ export default function Profile() {
                   <UserReviewCard
                     key={review.id}
                     review={review}
-                    displayName={
-                      user?.username ||
-                      (user?.email ? user.email.split('@')[0] : 'User')
-                    }
+                    displayName={displayName}
                     stars={starsForRating(review.rating)}
                     onEdit={() => handleEditReview(review)}
                     onDelete={() => handleDeleteReview(review)}

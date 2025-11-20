@@ -4,10 +4,11 @@ import Header from '@/components/header.jsx';
 import Footer from '@/components/footer.jsx';
 import MediaCard from '@/components/mediacard.jsx';
 
+import tmdb from '@/service/tmdbApi';
+
 export default function SearchResults() {
   const [params] = useSearchParams();
   const q = params.get('q') || '';
-  const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -16,20 +17,20 @@ export default function SearchResults() {
 
   useEffect(() => {
     let cancelled = false;
+
     const run = async () => {
       if (!query) {
         setResults([]);
         return;
       }
+
       try {
         setLoading(true);
-        const res = await fetch(
-          `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&language=en-US&query=${encodeURIComponent(
-            query
-          )}&page=1&include_adult=false`
-        );
-        const json = await res.json();
+
+        const json = await tmdb.searchMulti(query, 1);
+
         if (cancelled) return;
+
         const mapped = (json.results || [])
           .filter((r) => r.media_type === 'movie' || r.media_type === 'tv')
           .map((r) => {
@@ -40,7 +41,7 @@ export default function SearchResults() {
               title: r.title,
               name: r.name,
               poster: r.poster_path
-                ? `https://image.tmdb.org/t/p/w500${r.poster_path}`
+                ? tmdb.getImageUrl(r.poster_path, 'w500')
                 : '/placeholder.png',
               rating: r.vote_average ? r.vote_average.toFixed(1) : 'N/A',
               year:
@@ -49,16 +50,18 @@ export default function SearchResults() {
               seasons: isSeries ? '—' : undefined,
             };
           });
+
         setResults(mapped);
       } finally {
         setLoading(false);
       }
     };
+
     run();
     return () => {
       cancelled = true;
     };
-  }, [query, API_KEY]);
+  }, [query]);
 
   return (
     <div className="min-h-screen bg-[#201E1F] flex flex-col">

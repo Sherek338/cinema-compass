@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import Header from '@/components/header.jsx';
 import Footer from '@/components/footer.jsx';
 import { Heart } from 'lucide-react';
 import { useAuth } from '@/context/authContext.jsx';
 import UserReviews from '@/components/UserReviews.jsx';
+import tmdb from '@/service/tmdbApi';
 
 const imageUrl = (path, size = 'w780') =>
   path ? `https://image.tmdb.org/t/p/${size}${path}` : '/placeholder.png';
@@ -13,6 +14,8 @@ export default function MediaDetail() {
   const { id } = useParams();
   const location = useLocation();
   const isSeries = location.pathname.includes('/series');
+  const type = isSeries ? 'tv' : 'movie';
+  const mediaType = type;
 
   const {
     isAuthenticated,
@@ -22,7 +25,11 @@ export default function MediaDetail() {
     removeFromWatchlist,
     addToFavorites,
     removeFromFavorites,
+    apiRequest,
+    fetchIsAdmin,
   } = useAuth();
+
+  const isAdminRef = useRef(false);
 
   const [details, setDetails] = useState(null);
   const [credits, setCredits] = useState(null);
@@ -30,45 +37,30 @@ export default function MediaDetail() {
   const [reviews, setReviews] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeReview, setActiveReview] = useState(null);
+
+  const [isBanned, setIsBanned] = useState(false);
+  const [banId, setBanId] = useState(null);
+  const [banLoading, setBanLoading] = useState(false);
+
   const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
   const [photoViewerIndex, setPhotoViewerIndex] = useState(0);
   const [fullCastOpen, setFullCastOpen] = useState(false);
 
-  const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
+  const movieId = Number(id);
 
   useEffect(() => {
     let cancelled = false;
-    const type = isSeries ? 'tv' : 'movie';
 
-    const fetchAll = async () => {
+    const load = async () => {
       try {
         setLoading(true);
 
-        const [dRes, cRes, iRes, rRes, recRes] = await Promise.all([
-          fetch(
-            `https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}&language=en-US`
-          ),
-          fetch(
-            `https://api.themoviedb.org/3/${type}/${id}/credits?api_key=${API_KEY}&language=en-US`
-          ),
-          fetch(
-            `https://api.themoviedb.org/3/${type}/${id}/images?api_key=${API_KEY}`
-          ),
-          fetch(
-            `https://api.themoviedb.org/3/${type}/${id}/reviews?api_key=${API_KEY}&language=en-US`
-          ),
-          fetch(
-            `https://api.themoviedb.org/3/${type}/${id}/recommendations?api_key=${API_KEY}&language=en-US&page=1`
-          ),
-        ]);
-
         const [d, c, i, rv, rec] = await Promise.all([
-          dRes.json(),
-          cRes.json(),
-          iRes.json(),
-          rRes.json(),
-          recRes.json(),
+          tmdb.getDetails(type, id),
+          tmdb.getCredits(type, id),
+          tmdb.getImages(type, id),
+          tmdb.getReviews(type, id),
+          tmdb.getRecommendations(type, id, 1),
         ]);
 
         if (cancelled) return;
@@ -86,106 +78,149 @@ export default function MediaDetail() {
       }
     };
 
-    fetchAll();
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, isSeries]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAdminAndBan = async () => {
+      isAdminRef.current = false;
+      setIsBanned(false);
+      setBanId(null);
+
+      if (!isAuthenticated) return;
+
+      try {
+        const adminFlag = await fetchIsAdmin();
+        if (cancelled) return;
+        isAdminRef.current = !!adminFlag;
+
+        if (!isAdminRef.current) {
+          return;
+        }
+
+        const list = await apiRequest('/api/admin/banned', { method: 'GET' });
+        if (cancelled) return;
+
+        const found = Array.isArray(list)
+          ? list.find(
+              (x) => Number(x.tmdb_id) === movieId && x.type === mediaType
+            )
+          : null;
+
+        if (found) {
+          setIsBanned(true);
+          setBanId(found._id || found.id || null);
+        } else {
+          setIsBanned(false);
+          setBanId(null);
+        }
+      } catch (err) {
+        console.error('Failed to determine admin/ban status', err);
+        isAdminRef.current = false;
+        setIsBanned(false);
+        setBanId(null);
+      }
+    };
+
+    loadAdminAndBan();
 
     return () => {
       cancelled = true;
     };
-  }, [id, isSeries, API_KEY]);
+  }, [isAuthenticated, movieId, mediaType, fetchIsAdmin, apiRequest]);
 
-  useEffect(() => {
-    const anyModalOpen = photoViewerOpen || !!activeReview || fullCastOpen;
-    if (!anyModalOpen) return;
+  const toggleBan = async () => {
+    if (!isAdminRef.current) return;
 
-    const totalPhotos = images?.backdrops?.length || 0;
+    try {
+      setBanLoading(true);
 
-    const handleKey = (e) => {
-      if (e.key === 'Escape') {
-        setActiveReview(null);
-        setPhotoViewerOpen(false);
-        setFullCastOpen(false);
-        return;
+      if (!isBanned) {
+        const created = await apiRequest('/api/admin/banned', {
+          method: 'POST',
+          body: JSON.stringify({ tmdb_id: movieId, type: mediaType }),
+        });
+
+        const newId = created?._id ?? created?.id ?? null;
+        setIsBanned(true);
+        setBanId(newId);
+      } else {
+        if (!banId) {
+          try {
+            const list = await apiRequest('/api/admin/banned', {
+              method: 'GET',
+            });
+            const found = Array.isArray(list)
+              ? list.find(
+                  (x) => Number(x.tmdb_id) === movieId && x.type === mediaType
+                )
+              : null;
+            if (found && found._id) {
+              await apiRequest(`/api/admin/banned/${found._id}`, {
+                method: 'DELETE',
+              });
+            } else {
+              console.warn('Ban id not found for unban');
+            }
+          } catch (err) {
+            console.error('Unban fallback failed', err);
+            throw err;
+          }
+        } else {
+          await apiRequest(`/api/admin/banned/${banId}`, { method: 'DELETE' });
+        }
+
+        setIsBanned(false);
+        setBanId(null);
       }
-      if (!photoViewerOpen || totalPhotos === 0) return;
-      if (e.key === 'ArrowRight') {
-        setPhotoViewerIndex((i) => Math.min(totalPhotos - 1, i + 1));
-      } else if (e.key === 'ArrowLeft') {
-        setPhotoViewerIndex((i) => Math.max(0, i - 1));
-      }
-    };
-
-    window.addEventListener('keydown', handleKey);
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      window.removeEventListener('keydown', handleKey);
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [photoViewerOpen, activeReview, fullCastOpen, images]);
-
-  const mediaType = isSeries ? 'series' : 'movie';
-  const movieId = Number(id);
+    } catch (err) {
+      console.error('Ban/Unban error', err);
+    } finally {
+      setBanLoading(false);
+    }
+  };
 
   const inWatchlist =
     isAuthenticated &&
-    movieId &&
-    watchList.some((wItem) => movieId === wItem.id && wItem.type === mediaType);
+    watchList.some((x) => x.id === movieId && x.type === mediaType);
+
   const inFavorites =
     isAuthenticated &&
-    movieId &&
-    favoriteList.some(
-      (fItem) => movieId === fItem.id && fItem.type === mediaType
-    );
+    favoriteList.some((x) => x.id === movieId && x.type === mediaType);
 
   const [localInWatchlist, setLocalInWatchlist] = useState(inWatchlist);
   const [localInFavorites, setLocalInFavorites] = useState(inFavorites);
 
-  useEffect(() => {
-    setLocalInWatchlist(inWatchlist);
-  }, [inWatchlist]);
-
-  useEffect(() => {
-    setLocalInFavorites(inFavorites);
-  }, [inFavorites]);
+  useEffect(() => setLocalInWatchlist(inWatchlist), [inWatchlist]);
+  useEffect(() => setLocalInFavorites(inFavorites), [inFavorites]);
 
   const handleWatchlistClick = async () => {
-    if (!isAuthenticated || !movieId) return;
-    try {
-      if (localInWatchlist) {
-        await removeFromWatchlist(movieId, mediaType);
-        setLocalInWatchlist(false);
-      } else {
-        await addToWatchlist(movieId, mediaType);
-        setLocalInWatchlist(true);
-      }
-    } catch (err) {
-      console.error('Failed to update watchlist', err);
+    if (!isAuthenticated) return;
+
+    if (localInWatchlist) {
+      await removeFromWatchlist(movieId, mediaType);
+      setLocalInWatchlist(false);
+    } else {
+      await addToWatchlist(movieId, mediaType);
+      setLocalInWatchlist(true);
     }
   };
 
   const handleFavoritesClick = async () => {
-    if (!isAuthenticated || !movieId) return;
-    try {
-      if (localInFavorites) {
-        await removeFromFavorites(movieId, mediaType);
-        setLocalInFavorites(false);
-      } else {
-        await addToFavorites(movieId, mediaType);
-        setLocalInFavorites(true);
-      }
-    } catch (err) {
-      console.error('Failed to update favorites', err);
+    if (!isAuthenticated) return;
+
+    if (localInFavorites) {
+      await removeFromFavorites(movieId, mediaType);
+      setLocalInFavorites(false);
+    } else {
+      await addToFavorites(movieId, mediaType);
+      setLocalInFavorites(true);
     }
-  };
-
-  const openPhotoViewer = (index) => {
-    setPhotoViewerIndex(index);
-    setPhotoViewerOpen(true);
-  };
-
-  const closePhotoViewer = () => {
-    setPhotoViewerOpen(false);
   };
 
   const openTrailer = () => {
@@ -197,21 +232,19 @@ export default function MediaDetail() {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  if (loading) {
+  if (loading)
     return (
       <div className="flex justify-center items-center min-h-screen bg-raisin-black">
         <div className="w-12 h-12 rounded-full border-4 border-coquelicot border-t-transparent animate-spin" />
       </div>
     );
-  }
 
-  if (!details) {
+  if (!details)
     return (
       <div className="flex justify-center items-center min-h-screen bg-raisin-black text-white">
         <p>Content not found.</p>
       </div>
     );
-  }
 
   const {
     title,
@@ -268,7 +301,6 @@ export default function MediaDetail() {
   const fullCast = credits?.cast || [];
   const reviewList = reviews.slice(0, 4);
   const photoList = (images?.backdrops || []).slice(0, 12);
-  const recList = recommendations.slice(0, 6);
 
   const backLink = isSeries ? '/series' : '/movies';
 
@@ -277,6 +309,7 @@ export default function MediaDetail() {
       <Header />
 
       <main className="pt-0">
+        {/* Background Banner */}
         <div className="relative w-full h-[500px] md:h-[700px] lg:h-[824px] overflow-hidden">
           <img
             src={imageUrl(backdrop_path || poster_path, 'original')}
@@ -285,6 +318,7 @@ export default function MediaDetail() {
           />
           <div className="absolute inset-0 bg-black/50" />
 
+          {/* Banner content */}
           <div className="relative h-full max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[70px] flex flex-col justify-end pb-12 md:pb-20">
             <div className="mb-3 md:mb-4">
               <p className="text-white text-base md:text-lg">
@@ -304,8 +338,9 @@ export default function MediaDetail() {
                 Watch trailer
               </button>
 
-              {isAuthenticated && movieId && (
+              {isAuthenticated && (
                 <>
+                  {/* WATCHLIST */}
                   <button
                     onClick={handleWatchlistClick}
                     className={`px-4 md:px-6 py-2 md:py-2.5 rounded-lg font-normal transition-colors cursor-pointer ${
@@ -319,6 +354,7 @@ export default function MediaDetail() {
                       : 'Add to Watchlist'}
                   </button>
 
+                  {/* FAVORITES */}
                   <button
                     onClick={handleFavoritesClick}
                     className={`p-2.5 border rounded-lg transition-colors cursor-pointer ${
@@ -333,6 +369,25 @@ export default function MediaDetail() {
                       fill={localInFavorites ? 'white' : 'none'}
                     />
                   </button>
+
+                  {/* ADMIN BAN BUTTON */}
+                  {isAdminRef.current && (
+                    <button
+                      onClick={toggleBan}
+                      disabled={banLoading}
+                      className={`px-4 md:px-6 py-2 md:py-2.5 rounded-lg font-normal transition-colors cursor-pointer ${
+                        isBanned
+                          ? 'bg-red-600 text-white hover:bg-red-700'
+                          : 'bg-yellow-500 text-black hover:bg-yellow-400'
+                      }`}
+                    >
+                      {banLoading
+                        ? 'Processing...'
+                        : isBanned
+                          ? 'Unban'
+                          : 'Ban'}
+                    </button>
+                  )}
                 </>
               )}
 
@@ -350,7 +405,9 @@ export default function MediaDetail() {
           </div>
         </div>
 
+        {/* Page Content */}
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-[70px] py-8 md:py-12 lg:py-16">
+          {/* Overview */}
           <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 mb-12 md:mb-16">
             <div className="flex-1 max-w-[420px]">
               <h2 className="text-white text-2xl md:text-[30px] font-bold mb-3 md:mb-4">
@@ -394,22 +451,18 @@ export default function MediaDetail() {
               </div>
             </div>
 
+            {/* Cast List */}
             <div className="flex-1 max-w-[310px]">
               <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">
                 Cast
               </h2>
               <div className="space-y-4">
-                {castList.length === 0 && (
-                  <p className="text-white/70 text-sm">
-                    No cast information available.
-                  </p>
-                )}
                 {castList.map((actor) => (
                   <div
                     key={actor.id}
                     className="flex items-center gap-4 md:gap-5"
                   >
-                    <div className="w-16 h-16 md:w-[90px] md:h-[90px] rounded-full bg-gray-700 flex-shrink-0 overflow-hidden">
+                    <div className="w-16 h-16 md:w-[90px] md:h-[90px] rounded-full bg-gray-700 overflow-hidden">
                       <img
                         src={imageUrl(actor.profile_path, 'w185')}
                         alt={actor.name}
@@ -427,42 +480,38 @@ export default function MediaDetail() {
                   </div>
                 ))}
               </div>
-              {fullCast.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setFullCastOpen(true)}
-                  className="mt-4 text-white text-base md:text-lg font-semibold hover:text-coquelicot transition-colors underline cursor-pointer"
-                >
-                  View full cast
-                </button>
-              )}
             </div>
           </div>
 
+          {/* Reviews */}
           <div className="mb-5">
             <UserReviews
-              key={`${movieId}-${isSeries ? 'series' : 'movie'}`}
-              movieId={movieId}
-              canWrite={isAuthenticated}
-              isSeries={isSeries}
-              title={displayTitle}
+              key={`${movieId}-${mediaType}`}
+              tmdbId={movieId}
+              mediaType={isSeries ? 'series' : 'movie'}
             />
           </div>
 
+          {/* Photos */}
           <section className="mb-12 md:mb-16">
             <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">
               Photos
             </h2>
+
             {photoList.length === 0 && (
               <p className="text-white/70 text-sm">No photos available.</p>
             )}
+
             {photoList.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
                 {photoList.slice(0, 5).map((photo, index) => (
                   <button
                     key={photo.file_path}
                     type="button"
-                    onClick={() => openPhotoViewer(index)}
+                    onClick={() => {
+                      setPhotoViewerIndex(index);
+                      setPhotoViewerOpen(true);
+                    }}
                     className="w-full h-[200px] md:h-[250px] rounded overflow-hidden"
                   >
                     <img
@@ -472,37 +521,18 @@ export default function MediaDetail() {
                     />
                   </button>
                 ))}
-                {photoList.length > 5 && (
-                  <button
-                    type="button"
-                    onClick={() => openPhotoViewer(5)}
-                    className="relative w-full h-[200px] md:h-[250px] rounded overflow-hidden cursor-pointer group"
-                  >
-                    <img
-                      src={imageUrl(photoList[5].file_path, 'w780')}
-                      alt={`${displayTitle} more photos`}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                      <p className="text-white text-base md:text-lg font-bold">
-                        + {Math.max(0, photoList.length - 5)} photos
-                      </p>
-                    </div>
-                  </button>
-                )}
               </div>
             )}
           </section>
 
+          {/* Recommendations */}
           <section>
             <h2 className="text-white text-2xl md:text-[30px] font-bold mb-4 md:mb-6">
               More like this
             </h2>
-            {recList.length === 0 && (
-              <p className="text-white/70 text-sm">No recommendations yet.</p>
-            )}
+
             <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 scrollbar-hide">
-              {recList.map((rec) => {
+              {recommendations.slice(0, 8).map((rec) => {
                 const recTitle = rec.title || rec.name;
                 const recYear = (
                   rec.release_date ||
@@ -524,27 +554,15 @@ export default function MediaDetail() {
                       alt={recTitle}
                       className="w-full h-[273px] object-cover rounded-sm mb-3 transition-transform group-hover:scale-105"
                     />
+
                     <h3 className="text-white text-lg md:text-[20px] font-semibold mb-1 leading-tight">
                       {recTitle}
                     </h3>
+
                     <div className="flex items-end gap-2.5 text-white font-semibold text-[15px]">
                       <span>{recYear}</span>
                       <span>•</span>
-                      <div className="flex items-center gap-1">
-                        <svg
-                          width="19"
-                          height="19"
-                          viewBox="0 0 19 19"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M16.346 8.95142C16.9889 8.37204 16.6419 7.30502 15.7813 7.21413L12.5459 6.87245C12.191 6.83497 11.8829 6.61116 11.7376 6.28519L10.4133 3.31494C10.0609 2.52454 8.93905 2.52454 8.58666 3.31494L7.26241 6.28519C7.11708 6.61116 6.80903 6.83497 6.4541 6.87245L3.2187 7.21413C2.35808 7.30502 2.01139 8.37204 2.65423 8.95142L5.07077 11.1294C5.33589 11.3684 5.45356 11.7305 5.37953 12.0796L4.70499 15.261C4.52549 16.1076 5.43316 16.7671 6.18284 16.3347L9.00041 14.7098C9.3096 14.5314 9.6904 14.5314 9.99959 14.7098L12.8172 16.3347C13.5668 16.7671 14.4745 16.1076 14.295 15.261L13.6205 12.0796C13.5467 11.7305 13.6644 11.3684 13.9295 11.1294L16.346 8.95142Z"
-                            fill="#F5C519"
-                          />
-                        </svg>
-                        <span>{recRating}</span>
-                      </div>
+                      <span>{recRating}</span>
                     </div>
                   </Link>
                 );
@@ -560,133 +578,6 @@ export default function MediaDetail() {
           </section>
         </div>
       </main>
-
-      {photoViewerOpen && photoList.length > 0 && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
-          onClick={closePhotoViewer}
-        >
-          <div
-            className="max-w-5xl w-full px-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={closePhotoViewer}
-              className="absolute top-6 right-6 text-white text-2xl cursor-pointer"
-            >
-              ×
-            </button>
-            <img
-              src={imageUrl(photoList[photoViewerIndex].file_path, 'original')}
-              alt={`${displayTitle} still full`}
-              className="w-full max-h-[80vh] object-contain rounded-lg"
-            />
-            <div className="flex items-center justify-between mt-4 text-white">
-              <button
-                type="button"
-                disabled={photoViewerIndex === 0}
-                onClick={() => setPhotoViewerIndex((i) => Math.max(0, i - 1))}
-                className="px-3 py-1 rounded border border-white/40 disabled:opacity-40"
-              >
-                Prev
-              </button>
-              <span className="text-sm">
-                {photoViewerIndex + 1} / {photoList.length}
-              </span>
-              <button
-                type="button"
-                disabled={photoViewerIndex === photoList.length - 1}
-                onClick={() =>
-                  setPhotoViewerIndex((i) =>
-                    Math.min(photoList.length - 1, i + 1)
-                  )
-                }
-                className="px-3 py-1 rounded border border-white/40 disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeReview && (
-        <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-          onClick={() => setActiveReview(null)}
-        >
-          <div
-            className="bg-raisin-black p-6 rounded-xl max-w-xl w-full text-white relative max-h-[80vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="absolute top-3 right-3 text-xl cursor-pointer"
-              onClick={() => setActiveReview(null)}
-            >
-              ×
-            </button>
-
-            <h2 className="text-2xl font-bold mb-2">
-              {activeReview.author || 'Anonymous'}
-            </h2>
-
-            <p className="text-sm mb-3 opacity-70">
-              {activeReview.created_at
-                ? new Date(activeReview.created_at).toLocaleDateString()
-                : 'Unknown date'}
-            </p>
-
-            <div className="text-base leading-relaxed whitespace-pre-wrap">
-              {activeReview.content}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {fullCastOpen && fullCast.length > 0 && (
-        <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-          onClick={() => setFullCastOpen(false)}
-        >
-          <div
-            className="bg-raisin-black p-6 rounded-xl max-w-2xl w-full text-white relative max-h-[80vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="absolute top-3 right-3 text-xl cursor-pointer"
-              onClick={() => setFullCastOpen(false)}
-            >
-              ×
-            </button>
-
-            <h2 className="text-2xl font-bold mb-4">Full cast</h2>
-
-            <div className="space-y-3">
-              {fullCast.map((actor) => (
-                <div
-                  key={actor.cast_id || actor.credit_id || actor.id}
-                  className="flex items-center gap-3"
-                >
-                  <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
-                    <img
-                      src={imageUrl(actor.profile_path, 'w185')}
-                      alt={actor.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">{actor.name}</p>
-                    <p className="text-xs text-white/70">
-                      {actor.character || 'Unknown role'}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       <Footer />
     </div>

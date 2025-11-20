@@ -4,7 +4,7 @@ import Header from '@/components/header.jsx';
 import Footer from '@/components/footer.jsx';
 import { useAuth } from '@/context/authContext.jsx';
 
-const TMDB_BASE = 'https://api.themoviedb.org/3';
+import tmdb from '@/service/tmdbApi.js';
 
 function formatRuntime(runtime) {
   if (!runtime || Number.isNaN(runtime)) return null;
@@ -15,51 +15,49 @@ function formatRuntime(runtime) {
   return `${h}h ${m}m`;
 }
 
-async function fetchOneTMDB(id, type, apiKey, signal) {
-  const url = `${TMDB_BASE}/${type === 'movie' ? 'movie' : 'tv'}/${id}?api_key=${apiKey}&language=en-US`;
-  let res = await fetch(url, { signal });
+async function loadMediaItem(id, type) {
+  const isSeries = type === 'series';
 
-  let mediaType = 'movie';
+  const data = await tmdb.getMediaDetails(id, isSeries);
+  if (!data) return null;
 
-  if (!res.ok) {
-    res = await fetch(
-      `${TMDB_BASE}/tv/${id}?api_key=${apiKey}&language=en-US`,
-      { signal }
-    );
-    if (!res.ok) return null;
-    mediaType = 'tv';
+  const title = data.title || data.name || 'Untitled';
+  const year = (data.release_date || data.first_air_date || '').slice(0, 4);
+
+  // Постер
+  const poster = data.poster_path
+    ? tmdb.getImageUrl(data.poster_path, 'w342')
+    : '/placeholder.png';
+
+  // Формируем meta-информацию
+  let meta = null;
+
+  if (isSeries) {
+    const s = data.number_of_seasons;
+    if (typeof s === 'number') {
+      meta = `${s} season${s === 1 ? '' : 's'}`;
+    }
+  } else {
+    if (typeof data.runtime === 'number') {
+      meta = formatRuntime(data.runtime);
+    }
   }
 
-  const data = await res.json();
-
-  const isSeries = type === 'series';
-  const seasons =
-    isSeries && typeof data.number_of_seasons === 'number'
-      ? `${data.number_of_seasons} season${
-          data.number_of_seasons === 1 ? '' : 's'
-        }`
-      : null;
-
-  const duration =
-    !isSeries && typeof data.runtime === 'number'
-      ? formatRuntime(data.runtime)
-      : null;
+  // Рейтинг
+  let rating = null;
+  if (typeof data.vote_average === 'number') {
+    const r = data.vote_average.toFixed(1);
+    rating = r === '0.0' ? 'N/A' : r;
+  }
 
   return {
     id: data.id,
-    title: data.title || data.name || 'Untitled',
-    year: (data.release_date || data.first_air_date || '').slice(0, 4),
-    rating:
-      typeof data.vote_average === 'number'
-        ? data.vote_average.toFixed(1) === '0.0'
-          ? 'N/A'
-          : data.vote_average.toFixed(1)
-        : null,
-    poster: data.poster_path
-      ? `https://image.tmdb.org/t/p/w342${data.poster_path}`
-      : '/placeholder.png',
+    title,
+    year,
+    meta,
+    rating,
+    poster,
     isSeries,
-    meta: seasons || duration || null,
   };
 }
 
@@ -100,14 +98,17 @@ function ListCard({
             {title}
           </h3>
         </Link>
+
         <div className="flex items-end gap-2.5 text-white font-semibold text-[15px]">
           {year && <span>{year}</span>}
+
           {meta && (
             <>
               <span>•</span>
               <span>{meta.length > 6 ? meta.slice(0, 6) + '...' : meta}</span>
             </>
           )}
+
           {rating && (
             <>
               <span>•</span>
@@ -142,11 +143,8 @@ export default function Favorites() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('movies');
 
-  const TMDB_KEY = import.meta.env.VITE_TMDB_API_KEY;
-
   useEffect(() => {
     let cancelled = false;
-    const controller = new AbortController();
 
     const load = async () => {
       try {
@@ -161,22 +159,22 @@ export default function Favorites() {
 
         if (!favoriteList || favoriteList.length === 0) {
           setItems([]);
+          setLoading(false);
           return;
         }
 
         const results = await Promise.all(
-          favoriteList.map((item) =>
-            fetchOneTMDB(item.id, item.type, TMDB_KEY, controller.signal)
-          )
+          favoriteList.map((item) => loadMediaItem(item.id, item.type))
         );
 
-        if (cancelled) return;
-
-        setItems(results.filter(Boolean));
+        if (!cancelled) {
+          setItems(results.filter(Boolean));
+        }
       } catch (err) {
-        if (cancelled) return;
-        console.error('Failed to load favorites', err);
-        setError('Failed to load favorites.');
+        if (!cancelled) {
+          console.error('Failed to load favorites', err);
+          setError('Failed to load favorites.');
+        }
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -188,9 +186,8 @@ export default function Favorites() {
 
     return () => {
       cancelled = true;
-      controller.abort();
     };
-  }, [isAuthenticated, favoriteList, TMDB_KEY]);
+  }, [isAuthenticated, favoriteList]);
 
   const handleRemove = async (id) => {
     try {
@@ -213,6 +210,7 @@ export default function Favorites() {
       <main className="flex-1 max-w-7xl mx-auto px-8 lg:px-16 py-12 w-full pt-30">
         <h1 className="text-white font-bold text-[35px] mb-16">My Favorites</h1>
 
+        {/* Tabs */}
         <div className="flex items-start gap-9 justify-center mb-16">
           <div className="flex flex-col items-center gap-1">
             <button
@@ -226,9 +224,10 @@ export default function Favorites() {
               Movies
             </button>
             {activeTab === 'movies' && (
-              <div className="w-[75px] h-0.5 bg-[#FF4002]"></div>
+              <div className="w-[75px] h-0.5 bg-[#FF4002]" />
             )}
           </div>
+
           <div className="flex flex-col items-center gap-1">
             <button
               onClick={() => setActiveTab('series')}
@@ -241,11 +240,12 @@ export default function Favorites() {
               Series
             </button>
             {activeTab === 'series' && (
-              <div className="w-[75px] h-0.5 bg-[#FF4002]"></div>
+              <div className="w-[75px] h-0.5 bg-[#FF4002]" />
             )}
           </div>
         </div>
 
+        {/* States */}
         {!isAuthenticated && !loading && (
           <p className="text-sm text-gray-200 mb-8 text-center">
             Please sign in to see your favorites.
@@ -272,86 +272,10 @@ export default function Favorites() {
         {!loading && visibleItems.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5 mb-16">
             {visibleItems.map((m) => (
-              <ListCard
-                key={m.id}
-                id={m.id}
-                title={m.title}
-                year={m.year}
-                meta={m.meta}
-                rating={m.rating}
-                poster={m.poster}
-                isSeries={m.isSeries}
-                onRemove={() => handleRemove(m.id)}
-              />
+              <ListCard key={m.id} {...m} onRemove={() => handleRemove(m.id)} />
             ))}
           </div>
         )}
-
-        <div className="flex flex-col items-center gap-2.5">
-          <div className="flex justify-center items-center gap-2.5">
-            <span className="text-white text-center font-bold text-xl">1</span>
-          </div>
-          <div className="flex items-center">
-            <button className="p-2 hover:opacity-70 transition">
-              <svg
-                width="37"
-                height="37"
-                viewBox="0 0 37 37"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <g clipPath="url(#clip0_198_626_fav)">
-                  <path
-                    d="M23.125 10.0209L13.875 19.2709L23.125 28.5209"
-                    stroke="#999999"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </g>
-                <defs>
-                  <clipPath id="clip0_198_626_fav">
-                    <rect
-                      width="37"
-                      height="37"
-                      fill="white"
-                      transform="matrix(0 1 1 0 0 0)"
-                    />
-                  </clipPath>
-                </defs>
-              </svg>
-            </button>
-            <button className="p-2 hover:opacity-70 transition">
-              <svg
-                width="37"
-                height="37"
-                viewBox="0 0 37 37"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <g clipPath="url(#clip0_198_629_fav)">
-                  <path
-                    d="M13.875 10.0209L23.125 19.2709L13.875 28.5209"
-                    stroke="#999999"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </g>
-                <defs>
-                  <clipPath id="clip0_198_629_fav">
-                    <rect
-                      width="37"
-                      height="37"
-                      fill="white"
-                      transform="matrix(0 1 -1 0 37 0)"
-                    />
-                  </clipPath>
-                </defs>
-              </svg>
-            </button>
-          </div>
-        </div>
       </main>
 
       <Footer />
