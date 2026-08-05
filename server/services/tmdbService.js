@@ -20,9 +20,15 @@ export async function processList(type, fetchFn, page = 1, targetCount = 20) {
   let results = [];
   let currentPage = page;
 
-  const bannedIds = await BannedMedia.find({ type }).distinct('tmdb_id');
+  let bannedIds = [];
+  let localItems = [];
 
-  const localItems = await LocalMedia.find({ type }).lean();
+  // try {
+  //   bannedIds = await BannedMedia.find({ type }).distinct('tmdb_id');
+  //   localItems = await LocalMedia.find({ type }).lean();
+  // } catch (dbErr) {
+  //   console.log('DB unavailable, skipping banned/local media lookup:', dbErr);
+  // }
 
   results.push(...localItems);
 

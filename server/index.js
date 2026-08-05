@@ -47,14 +47,14 @@ app.use('/api/admin', adminRouter);
 
 app.use(errorMiddleware);
 
-mongoose
-  .connect(URI, clientOptions)
-  .then(() => {
-    console.log('MongoDB connection established');
-  })
-  .catch((err) => {
-    console.error('MongoDB connection error:', err);
-  });
+// mongoose
+//   .connect(URI, clientOptions)
+//   .then(() => {
+//     console.log('MongoDB connection established');
+//   })
+//   .catch((err) => {
+//     console.error('MongoDB connection error:', err);
+//   });
 
 if (process.env.MODE === 'development') {
   app.listen(PORT, () => {
