@@ -1,5 +1,3 @@
-import BannedMedia from '../models/BannedMediaModel.js';
-import LocalMedia from '../models/LocalMediaModel.js';
 import axios from 'axios';
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';

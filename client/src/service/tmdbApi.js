@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000/api/tmdb';
+const API_BASE = 'https://cinema-compass.vercel.app/api/tmdb';
 
 async function apiRequest(path, params = {}) {
   const queryParams = new URLSearchParams(params);
